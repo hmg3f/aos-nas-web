@@ -1,0 +1,51 @@
+#cloud-config
+autoinstall:
+  apt:
+    disable_components: []
+    fallback: offline-install
+    geoip: true
+    mirror-selection:
+      primary:
+        - country-mirror
+        - uri: "http://archive.ubuntu.com/ubuntu"
+          arches: [i386, amd64]
+        - uri: "http://ports.ubuntu.com/ubuntu-ports"
+          arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+    preserve_sources_list: false
+  codecs:
+    install: false
+  drivers:
+    install: false
+  identity:
+    hostname: nas-web
+    password: $6$IDCW3jSdT0ztIRTV$veNR56LNzEbwNd1tsyLs24XWEUzu3ahjbB/DL1SeIhUdb.Hc4mTsxyAZcdiGEgwFZIY1mmg3wJNVSdewkKC6y/
+    realname: user
+    username: user
+  kernel:
+    package: linux-generic
+  locale: en_US.UTF-8
+  network:
+    ethernets:
+      enp0s2:
+        dhcp4: true
+    version: 2
+  oem:
+    install: auto
+  packages:
+    - nftables
+    - git
+  source:
+    id: ubuntu-server-minimal
+    search_drivers: false
+  ssh:
+    allow-pw: true
+    authorized-keys: []
+    install-server: true
+  late-commands:
+    - systemctl enable ssh
+    - systemctl enable nftables
+  storage:
+    layout:
+      name: direct
+  updates: security
+  version: 1

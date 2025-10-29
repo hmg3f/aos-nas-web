@@ -1,0 +1,75 @@
+# -*- mode: conf -*-
+
+[DEFAULT]
+# Ban settings
+bantime  = 10m
+findtime = 10m
+maxretry = 5
+
+banaction = nftables-multiport
+banaction_allports = nftables-allports
+
+# Logging
+backend = systemd
+ignoreip = 127.0.0.1/8 ::1
+loglevel = INFO
+
+# Automatically start enabled jails
+mode = normal
+
+# -----------------------------------------------------------------------------
+# SSH settings
+[sshd]
+enabled  = true
+port     = ssh
+filter   = sshd
+logpath  = %(sshd_log)s
+maxretry = 5
+findtime = 10m
+bantime  = 30m
+
+# -----------------------------------------------------------------------------
+# Apache HTTPD settings
+[apache-auth]
+enabled  = true
+port     = http,https
+filter   = apache-auth
+logpath  = /var/log/apache2/*error.log
+maxretry = 5
+findtime = 10m
+bantime  = 1h
+
+[apache-badbots]
+enabled  = true
+port     = http,https
+filter   = apache-badbots
+logpath  = /var/log/apache2/*access.log
+maxretry = 1
+bantime  = 12h
+
+[apache-noscript]
+enabled  = true
+port     = http,https
+filter   = apache-noscript
+logpath  = /var/log/apache2/*error.log
+maxretry = 3
+bantime  = 1h
+
+[apache-overflows]
+enabled  = true
+port     = http,https
+filter   = apache-overflows
+logpath  = /var/log/apache2/*error.log
+maxretry = 2
+bantime  = 1h
+
+# -----------------------------------------------------------------------------
+# MySQL settings
+[mysqld-auth]
+enabled  = true
+filter   = mysqld-auth
+port     = 3306
+logpath  = /var/log/mysql/error.log
+maxretry = 5
+findtime = 10m
+bantime  = 1h

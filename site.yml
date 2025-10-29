@@ -1,0 +1,119 @@
+---
+- name: Initialize Server
+  hosts: servers
+  become: yes
+  vars:
+    apache_pkg: apache2
+    mysql_pkg: mysql-server
+    mysql_root_pass: admin
+    db_name: fs_store
+    db_user: fs
+    db_pass: fs_admin
+
+  tasks:
+    - name: Ensure Apache, MySQL, and nftables are installed
+      ansible.builtin.apt:
+        name:
+          - "{{ apache_pkg }}"
+          - "{{ mysql_pkg }}"
+          - nftables
+          - fail2ban
+          - python3-pymysql
+        state: present
+        update_cache: yes
+      tags: install
+
+    - name: Copy nftables configuration
+      ansible.builtin.copy:
+        src: site_conf/nftables.conf
+        dest: /etc/nftables.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart nftables
+      tags: nftables
+
+    - name: Copy fail2ban configuration
+      ansible.builtin.copy:
+        src: site_conf/fail2ban/
+        dest: /etc/fail2ban/
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart fail2ban
+      tags: fail2ban
+
+    - name: Ensure nftables is enabled and started
+      ansible.builtin.systemd:
+        name: nftables
+        state: started
+        enabled: yes
+      tags: nftables
+
+    - name: Ensure Apache is enabled and started
+      ansible.builtin.systemd:
+        name: "{{ apache_pkg }}"
+        state: started
+        enabled: yes
+      tags: apache
+
+    - name: Ensure MySQL is enabled and started
+      ansible.builtin.systemd:
+        name: "{{ mysql_pkg }}"
+        state: started
+        enabled: yes
+      tags: mysql
+
+    - name: Set MySQL root password and ensure root can log in
+      community.mysql.mysql_user:
+        name: root
+        host: localhost
+        password: "{{ mysql_root_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        state: present
+
+    - name: Ensure database exists
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Ensure database user exists
+      community.mysql.mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_pass }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Flush MySQL privileges
+      community.mysql.mysql_query:
+        query: FLUSH PRIVILEGES;
+        login_user: root
+        login_password: "{{ mysql_root_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Import schema
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        state: import
+        target: site_conf/schema.sql
+        login_user: root
+        login_password: "{{ mysql_root_pass }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+  handlers:
+    - name: Restart nftables
+      ansible.builtin.systemd:
+        name: nftables
+        state: restarted
+
+    - name: Restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted
