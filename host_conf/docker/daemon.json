@@ -1,0 +1,12 @@
+{
+  "iptables" : false,
+  "ip6tables" : false,
+  "bip": "10.0.0.1/24",
+  "fixed-cidr": "10.0.0.0/25",
+  "default-address-pools": [
+    {
+      "base":"10.10.0.0/16",
+      "size":24
+    }
+  ]
+}
