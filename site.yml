@@ -59,7 +59,7 @@
 
     - name: Ensure MySQL is enabled and started
       ansible.builtin.systemd:
-        name: "{{ mysql_pkg }}"
+        name: "mysql"
         state: started
         enabled: yes
       tags: mysql
