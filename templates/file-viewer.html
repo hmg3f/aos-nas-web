@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAS-view :: File Viewer</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+  <body>
+    <section id="file-view">
+      <h1>Files</h1>
+
+      <table>
+	<thead>
+	  <tr>
+	    <th>Name</th>
+	    <th>Size</th>
+	    <th>Permissions</th>
+	  </tr>
+	</thead>
+	<tbody>
+	  {% for name, size, permissions in file_list %}
+	  <tr>
+	    <td>
+	      <a href="" class="overflow-hidden">
+		{{ name }}
+	      </a>
+	    </td>
+	    <td>{{ size }}</td>
+	    <td>{{ permissions }}</td>
+	  </tr>
+	  {% endfor %}
+	</tbody>
+      </table>
+    </section>
+    
+    <div class="controls">
+      <a href="{{url_for('logout')}}">&lt- Logout</a>
+    </div>
+  </body>
+</html>

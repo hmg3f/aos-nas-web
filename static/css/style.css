@@ -1,0 +1,29 @@
+.controls {
+    font-family: Mono;
+}
+
+.overflow-hidden {
+    overflow: hidden;
+}
+
+#file-view {
+    border-bottom: 4px dotted #3e3e3e;
+    margin: 20px;
+}
+
+#file-view table {
+    font-family: Mono;
+    width: 40%	 
+}
+
+#file-view table th:nth-child(1), 
+#file-view table td:nth-child(1) {
+    text-align: left;
+}
+
+#file-view table th:nth-child(2), 
+#file-view table th:nth-child(3),
+#file-view table td:nth-child(2),
+#file-view table td:nth-child(3) {
+    text-align: right;
+}
