@@ -1,33 +1,33 @@
-from flask import Flask, render_template, url_for, redirect
-from flask_sqlalchemy import SQLAlchemy
+from flask import render_template, url_for, redirect
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
-from flask_bcrypt import Bcrypt
 from wtforms import StringField, PasswordField, SelectField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 
 from module.datastore import datastore
+from module.util import convert_to_bytes, app, db, bcrypt
 
 import os
-import re
+import hashlib
+import time
 
 TEST_FILE_LIST=[('file1.txt', '12MB', '-rwxr-xr-x'), ('file2.txt', '230Kb', '-rwxr-xr-x')]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'store')
 
-db = SQLAlchemy()
+# db = SQLAlchemy()
 
-app = Flask(__name__)
+# app = Flask(__name__)
 app.register_blueprint(datastore, url_prefix='/store')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(DATABASE_PATH, 'users.db')}'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(DATABASE_PATH, 'nasinfo.db')}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'os3N95B6Z9cs'
 
 db.init_app(app)
 
-bcrypt = Bcrypt(app)
+# bcrypt = Bcrypt(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -37,45 +37,21 @@ login_manager.login_view = "login"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-def convert_to_bytes(size_str):
-    suffixes = {
-        'B': 1,
-        'K': 1024,
-        'M': 1024 ** 2,
-        'G': 1024 ** 3,
-        'T': 1024 ** 4,
-        'P': 1024 ** 5,
-        'E': 1024 ** 6
-    }
-
-    match = re.match(r'(\d+(?:\.\d+)?)\s*([KMGTP])?', size_str.strip(), re.IGNORECASE)
-    
-    if not match:
-        raise ValueError(f"Invalid size format: {size_str}")
-    
-    number = float(match.group(1))
-    suffix = match.group(2).upper() if match.group(2) else 'B'
-    
-    if suffix not in suffixes:
-        raise ValueError(f"Unsupported suffix: {suffix}")
-    
-    return int(number * suffixes[suffix])
+# def gen_quota_selections(quotas):
+#     return [(None, 'None')] + [(convert_to_bytes(size), size) for size in quotas]
 
 def gen_quota_selections(quotas):
-    return [(None, 'None')] + [(convert_to_bytes(size), size) for size in quotas]
+    return [(None, 'None')] + [(size, size) for size in quotas]
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
-    quota = db.Column(db.Integer, nullable=True)
-
-    # @validates('quota')
-    # def validate_quota(self, key, value):
-    #     if value is not None and value < 0:
-    #         raise ValueError(f'Quota cannot be negative: {value}')
-    #     return value
+    quota = db.Column(db.String, nullable=True)
+    store_path = db.Column(db.String, nullable=False, unique=True)
+    archive_state = db.Column(db.String, nullable=True, default=None)
+    num_files = db.Column(db.Integer, nullable=False, default=0)
 
 class RegisterForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
@@ -89,7 +65,7 @@ class RegisterForm(FlaskForm):
 
 class LoginForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
-                                       Length(min=4, max=20)],
+                                       Length(min=2, max=20)],
                            render_kw={'placeholder': 'Username'})
     password = PasswordField(validators=[InputRequired(),
                                          Length(min=4, max=40)],
@@ -128,9 +104,16 @@ def create_user():
 
     if form.validate_on_submit():
         password_hash = bcrypt.generate_password_hash(form.password.data)
+        m = hashlib.sha256()
+        m.update(str(round(time.time())).encode('utf-8'))
+        m.update(form.username.data.encode('utf-8'))
+        user_dir = m.hexdigest()[:5]
+        store_path = os.path.join(DATABASE_PATH, user_dir)
+        
         user = User(username=form.username.data,
                     password=password_hash,
-                    quota=form.quota.data)
+                    quota=form.quota.data,
+                    store_path=store_path)
         db.session.add(user)
         db.session.commit()
 
