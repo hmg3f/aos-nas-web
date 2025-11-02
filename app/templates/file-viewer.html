@@ -7,7 +7,7 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
   </head>
   <body>
-    <section id="file-view">
+    <section id="file-view" class="panel">
       <h1>Files</h1>
 
       <table>
@@ -33,9 +33,13 @@
 	</tbody>
       </table>
     </section>
-    
-    <div class="controls">
-      <a href="{{url_for('logout')}}">&lt- Logout</a>
-    </div>
+
+    <section id="toolbox" class="panel">
+      <h1>Toolbox</h1>
+      
+      <div class="controls">
+	<a href="{{url_for('logout')}}">&lt- Logout</a>
+      </div>
+    </section>
   </body>
 </html>
