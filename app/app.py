@@ -4,14 +4,12 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 
-from module.datastore import datastore
+from module.datastore import datastore, retrieve_user_store
 from module.util import convert_to_bytes, app, db, bcrypt
 
 import os
 import hashlib
 import time
-
-TEST_FILE_LIST=[('file1.txt', '12MB', '-rwxr-xr-x'), ('file2.txt', '230Kb', '-rwxr-xr-x')]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'store')
@@ -92,7 +90,8 @@ def logout():
 @app.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
-    return render_template('file-viewer.html', file_list=TEST_FILE_LIST)
+    file_list = retrieve_user_store()
+    return render_template('file-viewer.html', file_list=file_list)
 
 @app.route('/create', methods=['GET', 'POST'])
 def create_user():
