@@ -98,7 +98,7 @@ class LoginForm(FlaskForm):
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('home.html', files_num=len(TEST_FILE_LIST))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

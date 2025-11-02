@@ -1,5 +1,100 @@
+body {
+    background-color: #000;
+    color: #fff;
+}
+
+.panel {
+    background-color: #303030;
+    font-family: Brass Mono, Monospace;
+}
+
+.panel h1 {
+    background-color: #535353;
+    font-size: 1.5rem;
+    padding-top: 2px;
+    padding-left: 10px;
+    cursor: pointer;
+}
+
+.panel h1::before {
+    content: "▲";
+    margin-right: 14px;
+}
+
+#login {
+    width: 350px;
+    margin: 0 auto;
+}
+
+#login form {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-bottom: 3px dotted #565656;
+    margin-bottom: 10px;
+}
+
+#login form input[type=password],
+#login form input[type=text] {
+    background-color: #000;
+    font-family: Brass Mono, Monospace;
+    font-size: 1rem;
+    color: #fff;
+    border: 3px inset #989898;
+}
+
+#login form input[type=password]:focus,
+#login form input[type=text]:focus {
+    outline: none;
+}
+
+#login form input[type=submit] {
+    background-color: #3e3e3e;
+    border: 2px solid #3e3e3e;
+    font-family: Brass Mono, Monospace;
+    font-size: 1rem;
+    color: #fff;
+}
+
+#login form input[type=submit]:hover {
+    background-color: #646464;
+    border: 2px solid #646464;
+    cursor: pointer;
+}
+
+#home {
+    width: 480px;
+    margin: 0 auto;
+}
+
 .controls {
-    font-family: Mono;
+    text-align: center;
+}
+
+.controls a {
+    color: #fff;
+    margin: 0 3px;
+    font-size: 1rem;
+}
+
+.places {
+    text-align: center;
+    border-bottom: 3px dotted #565656;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.places a {
+    color: #fff;
+    margin: 0 3px;
+    font-size: 1rem;
+}
+
+#home .banner {
+    text-align: center;
 }
 
 .overflow-hidden {
@@ -12,7 +107,7 @@
 }
 
 #file-view table {
-    font-family: Mono;
+    font-family: Monospace;
     width: 40%	 
 }
 

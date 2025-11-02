@@ -7,18 +7,20 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
   </head>
   <body>
-    <h1>Login</h1>
+    <section id="login" class="panel">
+      <h1>Login</h1>
 
-    <form method="POST" action="">
-      {{ form.hidden_tag() }}
-      {{ form.username }}
-      {{ form.password }}
-      {{ form.submit }}
-    </form>
+      <form method="POST" action="">
+	{{ form.hidden_tag() }}
+	{{ form.username }}
+	{{ form.password }}
+	{{ form.submit }}
+      </form>
 
-    <div class="controls">
-      <a href="{{url_for('home')}}">&lt- Return</a>
-      <a href="{{url_for('create_user')}}">Create User</a>
-    </div>
+      <div class="controls">
+	<a href="{{url_for('home')}}">🢐 Return</a>
+	<a href="{{url_for('create_user')}}">Create User</a>
+      </div>
+    </section>
   </body>
 </html>
