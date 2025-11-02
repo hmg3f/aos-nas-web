@@ -4,8 +4,9 @@ import sqlite3
 import borgapi
 
 import datetime
-from flask import Blueprint
+from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
 
 from module.util import db
 
@@ -62,18 +63,34 @@ def retrieve_user_store():
             
             if not current_user.archive_state:
                 select_archive_or_create(current_user)
-            
+                
             borg_api.mount(current_user.archive_state, stage_path)
             return os.listdir(stage_path)
 
-def add_file(user, file, meta):
-
-    if not os.path.exists(stage_path):
-        raise Exception()
-
-    with open(file_path, 'w') as fd:
-        fd.write(file)
-
+@datastore.route('/add', methods=['POST'])
+@login_required
+def add_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    # Get permissions (octal string like "664")
+    permissions = request.form.get('permissions', '740')
+    
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(get_stage_path(current_user), filename)
+        
+    file.save(filepath)
+        
+    return jsonify({
+        'message': 'File uploaded successfully',
+        'filename': filename,
+        'permissions': permissions
+    }), 201
     
 
     
