@@ -159,3 +159,42 @@ body {
 #file-view table a {
     color: #fff;
 }
+
+.subpanel {
+    padding: 10px;
+}
+
+.permissions-grid {
+    display: grid;
+    grid-template-columns: auto repeat(3, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #989898;
+    max-width: 300px;
+}
+
+.perm-header {
+    font-weight: bold;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.perm-label {
+    font-weight: bold;
+    padding-right: 0.5rem;
+}
+
+.permissions-grid input[type="checkbox"] {
+    justify-self: center;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.permission-display {
+    margin-top: 0.5rem;
+    padding: 5px;
+    border: 1px solid #989898;
+    max-width: 310px;
+}

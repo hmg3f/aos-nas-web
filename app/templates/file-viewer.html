@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NAS-view :: File Viewer</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='asset/favicon.svg') }}">
   </head>
   <body>
     <section id="file-view" class="panel">
@@ -38,8 +39,52 @@
       <h1>Toolbox</h1>
       
       <div class="controls">
-	<a href="{{url_for('logout')}}">&lt- Logout</a>
+	<a href="{{url_for('logout')}}">◀ Logout</a>
       </div>
+
+      <section id="file-upload" class="subpanel">
+	<h2>Upload File</h2>
+        <form method="POST" id="upload-form" action="{{ url_for('/store.add_file') }}" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="file-input">Choose file:</label>
+            <input type="file" name="file" required>
+          </div>
+
+	  <div class="form-group">
+            <label>Permissions:</label>
+            <div class="permissions-grid">
+              <div class="perm-header"></div>
+              <div class="perm-header">User</div>
+              <div class="perm-header">Group</div>
+              <div class="perm-header">Everyone</div>
+              
+              <div class="perm-label">Read</div>
+              <input type="checkbox" name="perm_user_read" checked>
+              <input type="checkbox" name="perm_group_read" checked>
+              <input type="checkbox" name="perm_everyone_read" checked>
+              
+              <div class="perm-label">Write</div>
+              <input type="checkbox" name="perm_user_write" checked>
+              <input type="checkbox" name="perm_group_write">
+              <input type="checkbox" name="perm_everyone_write">
+              
+              <div class="perm-label">Execute</div>
+              <input type="checkbox" name="perm_user_execute">
+              <input type="checkbox" name="perm_group_execute">
+	      <input type="checkbox" name="perm_everyone_execute">
+	    </div>
+	    <div class="permission-display">
+	      Octal: <span id="octal-display">740</span>
+	    </div>
+	  </div>
+	  
+	  <button type="submit">Upload</button>
+	  
+	  <div id="upload-status"></div>
+	</form>
+      </section>
     </section>
+
+    <script src="{{ url_for('static', filename='js/upload-handler.js') }}"></script>
   </body>
 </html>

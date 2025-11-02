@@ -4,30 +4,24 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 
-from module.datastore import datastore
+from module.datastore import datastore, retrieve_user_store
 from module.util import convert_to_bytes, app, db, bcrypt
 
 import os
 import hashlib
 import time
 
-TEST_FILE_LIST=[('file1.txt', '12MB', '-rwxr-xr-x'), ('file2.txt', '230Kb', '-rwxr-xr-x')]
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'store')
 
-# db = SQLAlchemy()
-
-# app = Flask(__name__)
 app.register_blueprint(datastore, url_prefix='/store')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(DATABASE_PATH, 'nasinfo.db')}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'os3N95B6Z9cs'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 db.init_app(app)
-
-# bcrypt = Bcrypt(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -96,7 +90,8 @@ def logout():
 @app.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
-    return render_template('file-viewer.html', file_list=TEST_FILE_LIST)
+    file_list = retrieve_user_store()
+    return render_template('file-viewer.html', file_list=file_list)
 
 @app.route('/create', methods=['GET', 'POST'])
 def create_user():

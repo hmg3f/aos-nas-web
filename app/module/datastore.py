@@ -2,10 +2,12 @@ import os
 import subprocess
 import sqlite3
 import borgapi
+import tempfile
 
 import datetime
-from flask import Blueprint
+from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
 
 from module.util import db
 
@@ -25,6 +27,12 @@ def get_repo_path(user):
 
         current_time = datetime.datetime.now()
         stage_path = get_stage_path(user)
+
+        metadata_db = os.path.join(stage_path, '_meta.db')
+        if not os.path.exists(metadata_db):
+            with open(metadata_db, 'w') as _:
+                pass
+        
         user.archive_state = current_time.strftime(f"{path}::%Y-%m-%d_%H:%M:%S")
         borg_api.create(user.archive_state, stage_path)
         
@@ -49,31 +57,53 @@ def get_mount_path(user):
 def select_archive_or_create(user):
     pass
 
+
+
 @datastore.route('/retrieve')
 @login_required
 def retrieve_user_store():
     if current_user.is_authenticated:
         stage_path = get_stage_path(current_user)
+        metadata_db = os.path.join(stage_path, '_meta.db') 
         
-        if os.path.ismount(stage_path):
-            return os.listdir(stage_path)
-        else:
+        if not os.path.exists(metadata_db):
             repo_path = get_repo_path(current_user)
             
             if not current_user.archive_state:
                 select_archive_or_create(current_user)
-            
-            borg_api.mount(current_user.archive_state, stage_path)
+                
+            borg_api.extract(current_user.archive_state, stage_path)
             return os.listdir(stage_path)
 
-def add_file(user, file, meta):
+        # TODO: once metadata db is implemented, pull files from there instead of listing directory.
+        return [(file, os.path.getsize(os.path.join(stage_path, file)), '-rwxr-----')
+                for file in os.listdir(stage_path)
+                if file != "_meta.db"]
 
-    if not os.path.exists(stage_path):
-        raise Exception()
-
-    with open(file_path, 'w') as fd:
-        fd.write(file)
-
+@datastore.route('/add', methods=['POST'])
+@login_required
+def add_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    # Get permissions (octal string like "664")
+    permissions = request.form.get('permissions', '740')
+    
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(get_stage_path(current_user), filename)
+        
+    file.save(filepath)
+        
+    return jsonify({
+        'message': 'File uploaded successfully',
+        'filename': filename,
+        'permissions': permissions
+    }), 201
     
 
     
