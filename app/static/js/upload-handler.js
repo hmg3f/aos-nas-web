@@ -1,15 +1,22 @@
-function updatePermissionDisplay() {
+function calculateOctalPermissions() {
     const perms = ['user', 'group', 'everyone'];
     let octal = '';
-    
+
     perms.forEach(entity => {
         let value = 0;
+	
         if (document.querySelector(`input[name="perm_${entity}_read"]`).checked) value += 4;
         if (document.querySelector(`input[name="perm_${entity}_write"]`).checked) value += 2;
         if (document.querySelector(`input[name="perm_${entity}_execute"]`).checked) value += 1;
+	
         octal += value;
     });
-    
+
+    return octal;
+}
+
+function updatePermissionDisplay() {
+    let octal = calculateOctalPermissions();
     document.getElementById('octal-display').textContent = octal;
 }
 
@@ -22,8 +29,7 @@ document.getElementById('upload-form').addEventListener('submit', function(e) {
     
     const formData = new FormData(this);
     
-    // Calculate octal permission value
-    const octal = document.getElementById('octal-display').textContent;
+    const octal = calculateOctalPermissions();
     formData.append('permissions', octal);
     
     const statusDiv = document.getElementById('upload-status');
@@ -52,10 +58,10 @@ document.getElementById('upload-form').addEventListener('submit', function(e) {
 		document.getElementById('upload-form').reset();
 		updatePermissionDisplay();
 		
-		// Reload page after 1 second to show new file
+		// Reload page after 2 second to show new file
 		setTimeout(() => {
 		    window.location.reload();
-		}, 1000);
+		}, 2000);
             }
         })
         .catch(error => {
