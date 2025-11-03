@@ -1,28 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAS-view :: Create User</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='asset/favicon.svg') }}">
-  </head>
-  <body>
-    <section id="login" class="panel">
-      <h1>Create User</h1>
+{% extends "base.html" %}
 
-      <form method="POST" action="">
-	{{ form.hidden_tag() }}
-	{{ form.username }}
-	{{ form.password }}
-	{{ form.quota }}
-	{{ form.submit }}
-      </form>
+{% block page_title %}Create User{% endblock %}
 
-      <div class="controls">
-	<a href="{{url_for('home')}}">◀ Return</a>
-	<a href="{{url_for('login')}}">Login</a>
-      </div>
-    </section>
-  </body>
-</html>
+{% block content %}
+<section id="login" class="panel">
+  <h1>Create User</h1>
+
+  <form method="POST" action="">
+    {{ form.hidden_tag() }}
+    {{ form.username }}
+    {{ form.password }}
+    {{ form.quota }}
+    {{ form.submit }}
+  </form>
+
+  <div class="controls">
+    <a href="{{url_for('home')}}">◀ Return</a>
+    <a href="{{url_for('login')}}">Login</a>
+  </div>
+</section>
+{% endblock %}
