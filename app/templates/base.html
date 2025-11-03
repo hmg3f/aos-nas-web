@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAS-view :: {% block page_title %}Home{% endblock %}</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='asset/favicon.svg') }}">
+    <style type="text/css">
+      @font-face {
+        font-family: Brass Mono;
+        src: url("{{ url_for('static', filename='asset/BrassMono-Regular.ttf') }}");
+      }
+      @font-face {
+        font-family: Brass Mono;
+        src: url("{{ url_for('static', filename='asset/BrassMono-Bold.ttf') }}");
+        font-weight: bold;
+      }
+      @font-face {
+        font-family: Brass Mono;
+        src: url("{{ url_for('static', filename='asset/BrassMono-Italic.ttf') }}");
+        font-style: italic;
+      }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
