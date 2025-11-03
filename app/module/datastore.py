@@ -57,8 +57,6 @@ def get_mount_path(user):
 def select_archive_or_create(user):
     pass
 
-
-
 @datastore.route('/retrieve')
 @login_required
 def retrieve_user_store():
@@ -73,7 +71,6 @@ def retrieve_user_store():
                 select_archive_or_create(current_user)
                 
             borg_api.extract(current_user.archive_state, stage_path)
-            return os.listdir(stage_path)
 
         # TODO: once metadata db is implemented, pull files from there instead of listing directory.
         return [(file, os.path.getsize(os.path.join(stage_path, file)), '-rwxr-----')
