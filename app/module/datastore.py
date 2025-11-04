@@ -99,12 +99,10 @@ def retrieve_user_store():
             files = metadata.get_files()
             if files:
                 return files
+            else:
+                return []
         except:
             pass
-        
-        # TODO: once metadata db is implemented, pull files from there instead of listing directory.
-        return [(file, os.path.getsize(os.path.join(user_tree_path, file)), '-rwxr-----')
-                for file in os.listdir(user_tree_path)]
 
 @datastore.route('/add', methods=['POST'])
 @login_required
