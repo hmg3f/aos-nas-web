@@ -71,6 +71,15 @@ def create_archive(user):
         
     db.session.commit()
 
+def octal_to_string(octal):
+    permission = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"]
+    result = "-"
+
+    for i in [int(n) for n in str(octal)]:
+        result += permission[i]
+
+    return result
+
 @datastore.route('/archive-list')
 @login_required
 def list_archives():
@@ -108,7 +117,7 @@ def add_file():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     
-    permissions = request.form.get('permissions', '740')
+    permissions = request.form.get('permissions', 740)
     
     filename = secure_filename(file.filename)
     filepath = os.path.join(get_stage_path(current_user), filename)
@@ -119,6 +128,8 @@ def add_file():
     file_size = os.path.getsize(filepath)
     metadata = UserMetadata(current_user.store_path)
     metadata.add_file(filename, file_size, permissions)
+
+    create_archive(current_user)
         
     return jsonify({
         'message': 'File uploaded successfully',

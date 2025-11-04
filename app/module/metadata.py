@@ -14,7 +14,7 @@ class UserMetadata:
                 id INTEGER PRIMARY KEY,
                 filename TEXT UNIQUE NOT NULL,
                 size INTEGER NOT NULL,
-                permissions TEXT DEFAULT '-rwxr-----',
+                permissions INTEGER DEFAULT 740,
                 upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 file_hash TEXT
             )
