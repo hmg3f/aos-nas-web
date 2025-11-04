@@ -85,7 +85,14 @@ def retrieve_user_store():
             borg_api.extract(current_user.archive_state, stage_path)
             return os.listdir(stage_path)
 
-        # TODO: once metadata db is implemented, pull files from there instead of listing directory.
+        # Use metadata database for file listing
+        metadata = UserMetadata(current_user.store_path)
+        try:
+            files = metadata.get_files()
+            if files:
+                return files
+        except:
+            pass
         return [(file, os.path.getsize(os.path.join(stage_path, file)), '-rwxr-----')
                 for file in os.listdir(stage_path)
                 if file != "_meta.db"]
@@ -103,9 +110,14 @@ def add_file():
     
     permissions = request.form.get('permissions', '-rwxr-----')
     filename = secure_filename(file.filename)
-    filepath = os.path.join(get_user_tree_path(current_user), filename)
+    filepath = os.path.join(get_stage_path(current_user), filename)
         
     file.save(filepath)
+    
+    # Add to metadata database
+    file_size = os.path.getsize(filepath)
+    metadata = UserMetadata(current_user.store_path)
+    metadata.add_file(filename, file_size, permissions)
         
     return jsonify({
         'message': 'File uploaded successfully',
