@@ -24,58 +24,67 @@ def get_repo_path(user):
             borg_api.init(path, make_parent_dirs=True, encryption="repokey", storage_quota=user.quota)
         else:
             borg_api.init(path, make_parent_dirs=True, encryption="repokey")
+        
+    return path
 
-        current_time = datetime.datetime.now()
-        stage_path = get_stage_path(user)
+def get_or_create_dir(path):
+    """return PATH, creating it if it does not exist"""
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-        metadata_db = os.path.join(stage_path, '_meta.db')
-        if not os.path.exists(metadata_db):
-            with open(metadata_db, 'w') as _:
-                pass
-        
-        user.archive_state = current_time.strftime(f"{path}::%Y-%m-%d_%H:%M:%S")
-        borg_api.create(user.archive_state, stage_path)
-        
-        db.session.commit()
-        
     return path
 
 def get_stage_path(user):
-    path = os.path.join(user.store_path, 'stage')
+    """return path to USER's archive staging directory (/store/stage/)"""
+    return get_or_create_dir(os.path.join(user.store_path, 'stage'))
+
+def get_metadb_path(user):
+    """return path to USER's metadata database (/store/stage/_meta.db)"""
+    path = os.path.join(get_stage_path(user), '_meta.db')
+    path = os.path.abspath(path)
+    
     if not os.path.exists(path):
-        os.makedirs(path)
-        
+        with open(path, 'w') as _:
+            pass
+
     return path
+
+def get_user_tree_path(user):
+    """return path to USER's working filetree (/store/stage/tree/)"""
+    return get_or_create_dir(os.path.join(get_stage_path(user), 'tree'))
 
 def get_mount_path(user):
-    path = os.path.join(user.store_path, 'mount')
-    if not os.path.exists(path):
-        os.makedirs(path)
-        
-    return path
+    """return path to mountpoint for USER's archives (/store/mount/)"""
+    return get_or_create_dir(os.path.join(user.store_path, 'mount'))
 
-def select_archive_or_create(user):
-    pass
+def create_archive(user):
+    """create a new archive for USER."""
+    current_time = datetime.datetime.now()
+    
+    stage_path = get_stage_path(user)
+    repo_path = get_repo_path(user)
+
+    user.archive_state = current_time.strftime(f"{repo_path}::%Y-%m-%d_%H:%M:%S")
+    borg_api.create(user.archive_state, stage_path)
+        
+    db.session.commit()
+
+@datastore.route('/archive-list')
+@login_required
+def list_archives():
+    repo_path = get_repo_path(current_user)
+    return borg_api.list(repo_path, json=True)
 
 @datastore.route('/retrieve')
 @login_required
 def retrieve_user_store():
     if current_user.is_authenticated:
-        stage_path = get_stage_path(current_user)
-        metadata_db = os.path.join(stage_path, '_meta.db') 
-        
-        if not os.path.exists(metadata_db):
-            repo_path = get_repo_path(current_user)
-            
-            if not current_user.archive_state:
-                select_archive_or_create(current_user)
-                
-            borg_api.extract(current_user.archive_state, stage_path)
+        user_tree_path = get_user_tree_path(current_user)
+        metadata_db = get_metadb_path(current_user)
 
         # TODO: once metadata db is implemented, pull files from there instead of listing directory.
-        return [(file, os.path.getsize(os.path.join(stage_path, file)), '-rwxr-----')
-                for file in os.listdir(stage_path)
-                if file != "_meta.db"]
+        return [(file, os.path.getsize(os.path.join(user_tree_path, file)), '-rwxr-----')
+                for file in os.listdir(user_tree_path)]
 
 @datastore.route('/add', methods=['POST'])
 @login_required
@@ -92,9 +101,11 @@ def add_file():
     permissions = request.form.get('permissions', '740')
     
     filename = secure_filename(file.filename)
-    filepath = os.path.join(get_stage_path(current_user), filename)
+    filepath = os.path.join(get_user_tree_path(current_user), filename)
         
     file.save(filepath)
+
+    create_archive(current_user)
         
     return jsonify({
         'message': 'File uploaded successfully',
