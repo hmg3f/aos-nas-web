@@ -30,8 +30,10 @@ def get_repo_path(user):
         current_time = datetime.datetime.now()
         stage_path = get_stage_path(user)
 
-        # Initialize metadata database
-        metadata = UserMetadata(user.store_path)
+        metadata_db = os.path.join(stage_path, '_meta.db')
+        if not os.path.exists(metadata_db):
+            with open(metadata_db, 'w') as _:
+                pass
         
         user.archive_state = current_time.strftime(f"{path}::%Y-%m-%d_%H:%M:%S")
         borg_api.create(user.archive_state, stage_path)
@@ -40,47 +42,41 @@ def get_repo_path(user):
         
     return path
 
-def get_stage_path(user):
-    path = os.path.join(user.store_path, 'stage')
+def get_or_create_dir(path):
+    """return PATH, creating it if it does not exist"""
     if not os.path.exists(path):
         os.makedirs(path)
-        
+
     return path
 
-def get_mount_path(user):
-    path = os.path.join(user.store_path, 'mount')
+def get_stage_path(user):
+    """return path to USER's archive staging directory (/store/stage/)"""
+    return get_or_create_dir(os.path.join(user.store_path, 'stage'))
+
+def get_metadb_path(user):
+    """return path to USER's metadata database (/store/stage/_meta.db)"""
+    path = os.path.join(get_stage_path(user), '_meta.db')
+    path = os.path.abspath(path)
+    
     if not os.path.exists(path):
-        os.makedirs(path)
-        
+        with open(path, 'w') as _:
+            pass
+
     return path
 
 def select_archive_or_create(user):
     pass
 
-def calculate_file_hash(filepath):
-    hash_md5 = hashlib.md5()
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+
 
 @datastore.route('/retrieve')
 @login_required
 def retrieve_user_store():
     if current_user.is_authenticated:
         stage_path = get_stage_path(current_user)
-        metadata = UserMetadata(current_user.store_path)
+        metadata_db = os.path.join(stage_path, '_meta.db') 
         
-        # Use metadata database for file listing
-        try:
-            files = metadata.get_files()
-            if files:
-                return files
-        except:
-            pass
-        
-        # Fallback to directory listing if metadata is empty
-        if not os.path.exists(os.path.join(stage_path, '_meta.db')):
+        if not os.path.exists(metadata_db):
             repo_path = get_repo_path(current_user)
             
             if not current_user.archive_state:
@@ -89,6 +85,7 @@ def retrieve_user_store():
             borg_api.extract(current_user.archive_state, stage_path)
             return os.listdir(stage_path)
 
+        # TODO: once metadata db is implemented, pull files from there instead of listing directory.
         return [(file, os.path.getsize(os.path.join(stage_path, file)), '-rwxr-----')
                 for file in os.listdir(stage_path)
                 if file != "_meta.db"]
@@ -106,20 +103,9 @@ def add_file():
     
     permissions = request.form.get('permissions', '-rwxr-----')
     filename = secure_filename(file.filename)
-    filepath = os.path.join(get_stage_path(current_user), filename)
+    filepath = os.path.join(get_user_tree_path(current_user), filename)
         
     file.save(filepath)
-    
-    # Add to metadata database
-    file_size = os.path.getsize(filepath)
-    file_hash = calculate_file_hash(filepath)
-    
-    metadata = UserMetadata(current_user.store_path)
-    metadata.add_file(filename, file_size, permissions, file_hash)
-    
-    # Update user file count
-    current_user.num_files += 1
-    db.session.commit()
         
     return jsonify({
         'message': 'File uploaded successfully',
