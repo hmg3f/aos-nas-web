@@ -14,6 +14,9 @@ import time
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_PATH = os.path.join(BASE_DIR, 'store')
 
+if not os.path.exists(DATABASE_PATH):
+    os.makedirs(DATABASE_PATH)
+
 app.register_blueprint(datastore, url_prefix='/store')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(DATABASE_PATH, 'nasinfo.db')}'
