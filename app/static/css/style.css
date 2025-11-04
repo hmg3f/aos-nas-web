@@ -119,7 +119,7 @@ body {
 }
 
 #file-view table {
-    width: 40%;
+    width: 70%;
     border: none;
     border-collapse: collapse;
     border-spacing: 0;
@@ -133,14 +133,16 @@ body {
 }
 
 #file-view table th:nth-child(1), 
-#file-view table td:nth-child(1) {
+#file-view table td:nth-child(1),
+#file-view table th:nth-child(2), 
+#file-view table td:nth-child(2) {
     text-align: left;
 }
 
-#file-view table th:nth-child(2), 
-#file-view table th:nth-child(3),
-#file-view table td:nth-child(2),
-#file-view table td:nth-child(3) {
+#file-view table th:nth-child(3), 
+#file-view table th:nth-child(4),
+#file-view table td:nth-child(3),
+#file-view table td:nth-child(4) {
     text-align: right;
 }
 

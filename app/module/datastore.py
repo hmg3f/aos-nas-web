@@ -120,7 +120,7 @@ def add_file():
     permissions = request.form.get('permissions', 740)
     
     filename = secure_filename(file.filename)
-    filepath = os.path.join(get_stage_path(current_user), filename)
+    filepath = os.path.join(get_user_tree_path(current_user), filename)
         
     file.save(filepath)
     
@@ -140,8 +140,9 @@ def add_file():
 
 @datastore.route('/delete/<filename>', methods=['DELETE'])
 @login_required
-def delete_file(filename):
+def delete_file(filename, archive=True):
     tree_path = get_user_tree_path(current_user)
+    filename = secure_filename(filename)
     filepath = os.path.join(tree_path, filename)
     
     if not os.path.exists(filepath):
@@ -157,5 +158,20 @@ def delete_file(filename):
     # Update user file count
     current_user.num_files = max(0, current_user.num_files - 1)
     db.session.commit()
+
+    if archive:
+        create_archive(current_user)
     
     return jsonify({'message': 'File deleted successfully'}), 200
+
+@datastore.route('/delete-multiple', methods=['DELETE'])
+@login_required
+def delete_multiple():
+    files = request.get_json().get('files', [])
+    
+    for file in files:
+        delete_file(file, archive=False)
+
+    create_archive(current_user)
+
+    return jsonify({'message': 'Files deleted successfully'}), 200
