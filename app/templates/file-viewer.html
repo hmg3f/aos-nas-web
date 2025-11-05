@@ -9,7 +9,11 @@
   <table>
     <thead>
       <tr>
-	<th>Name</th>
+	<th>
+          <input type="checkbox" id="select-all">
+	  <img src="{{ url_for('static', filename='asset/trash-can.svg') }}" alt="Delete" width="15px" height="15px">
+        </th>
+	<th style="width: 70%;">Name</th>
 	<th>Size</th>
 	<th>Permissions</th>
       </tr>
@@ -17,6 +21,9 @@
     <tbody>
       {% for name, size, permissions in file_list %}
       <tr>
+	<td>
+	  <input type="checkbox" class="file-checkbox" data-filename="{{ name }}">
+	</td>
 	<td>
 	  <a href="" class="overflow-hidden">
 	    {{ name }}
@@ -35,6 +42,7 @@
   
   <div class="controls">
     <a href="{{url_for('logout')}}">◀ Logout</a>
+    <button id="delete-button" disabled>Delete Selected</button>
   </div>
 
   <section id="file-upload" class="subpanel">
@@ -56,7 +64,7 @@
           <div class="perm-label">Read</div>
           <input type="checkbox" name="perm_user_read" checked>
           <input type="checkbox" name="perm_group_read" checked>
-          <input type="checkbox" name="perm_everyone_read" checked>
+          <input type="checkbox" name="perm_everyone_read">
           
           <div class="perm-label">Write</div>
           <input type="checkbox" name="perm_user_write" checked>
@@ -64,7 +72,7 @@
           <input type="checkbox" name="perm_everyone_write">
           
           <div class="perm-label">Execute</div>
-          <input type="checkbox" name="perm_user_execute">
+          <input type="checkbox" name="perm_user_execute" checked>
           <input type="checkbox" name="perm_group_execute">
 	  <input type="checkbox" name="perm_everyone_execute">
 	</div>
@@ -84,4 +92,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/upload-handler.js') }}"></script>
+<script src="{{ url_for('static', filename='js/file-delete.js') }}"></script>
 {% endblock %}

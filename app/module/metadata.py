@@ -22,7 +22,7 @@ class UserMetadata:
         conn.commit()
         conn.close()
     
-    def add_file(self, filename, size, permissions='-rwxr-----', file_hash=None):
+    def add_file(self, filename, size, permissions=740, file_hash=None):
         conn = sqlite3.connect(self.db_path)
         conn.execute('''
             INSERT OR REPLACE INTO files (filename, size, permissions, file_hash)
