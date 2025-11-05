@@ -19,7 +19,7 @@ if not os.path.exists(DATABASE_PATH):
 
 app.register_blueprint(datastore, url_prefix='/store')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(DATABASE_PATH, 'nasinfo.db')}'
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(DATABASE_PATH, 'nasinfo.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'os3N95B6Z9cs'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
