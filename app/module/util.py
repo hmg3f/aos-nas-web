@@ -32,3 +32,27 @@ def convert_to_bytes(size_str):
         raise ValueError(f"Unsupported suffix: {suffix}")
     
     return int(number * suffixes[suffix])
+
+def convert_from_bytes(byte_size):
+    units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
+    
+    if byte_size < 1:
+        return f"0 {units[0]}"
+    
+    unit_index = 0
+    while byte_size >= 1024 and unit_index < len(units) - 1:
+        byte_size /= 1024
+        unit_index += 1
+    
+    return f"{byte_size:.2f} {units[unit_index]}"
+
+def octal_to_string(octal):
+    permission = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"]
+    result = "-"
+    
+    for i in [int(n) for n in str(octal)]:
+        result += permission[i]
+
+    print(result)
+        
+    return result

@@ -14,12 +14,13 @@
 	  <img src="{{ url_for('static', filename='asset/trash-can.svg') }}" alt="Delete" width="15px" height="15px">
         </th>
 	<th style="width: 70%;">Name</th>
+	<th>Owner</th>
 	<th>Size</th>
 	<th>Permissions</th>
       </tr>
     </thead>
     <tbody>
-      {% for name, size, permissions in file_list %}
+      {% for name, owner, size, permissions in file_list %}
       <tr>
 	<td>
 	  <input type="checkbox" class="file-checkbox" data-filename="{{ name }}">
@@ -29,6 +30,7 @@
 	    {{ name }}
 	  </a>
 	</td>
+	<td>{{ owner }}</td>
 	<td>{{ size }}</td>
 	<td>{{ permissions }}</td>
       </tr>
