@@ -147,9 +147,11 @@ body {
 #file-view table th:nth-child(3), 
 #file-view table th:nth-child(4),
 #file-view table th:nth-child(5),
+#file-view table th:nth-child(6),
 #file-view table td:nth-child(3),
 #file-view table td:nth-child(4),
-#file-view table td:nth-child(5) {
+#file-view table td:nth-child(5),
+#file-view table td:nth-child(6){
     text-align: right;
 }
 

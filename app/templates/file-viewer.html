@@ -15,12 +15,13 @@
         </th>
 	<th style="width: 70%;">Name</th>
 	<th>Owner</th>
+	<th>Group</th>
 	<th>Size</th>
 	<th>Permissions</th>
       </tr>
     </thead>
     <tbody>
-      {% for name, owner, size, permissions in file_list %}
+      {% for name, owner, group, size, permissions in file_list %}
       <tr>
 	<td>
 	  <input type="checkbox" class="file-checkbox" data-filename="{{ name }}">
@@ -31,6 +32,7 @@
 	  </a>
 	</td>
 	<td>{{ owner }}</td>
+	<td>{{ group }}</td>
 	<td>{{ size }}</td>
 	<td>{{ permissions }}</td>
       </tr>

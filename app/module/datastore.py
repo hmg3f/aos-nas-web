@@ -114,7 +114,7 @@ def add_file():
     # Add to metadata database
     file_size = os.path.getsize(filepath)
     metadata = UserMetadata(current_user.store_path)
-    metadata.add_file(filename, current_user.username, file_size, permissions)
+    metadata.add_file(filename, current_user.username, file_size, permissions, file_group=None)
 
     create_archive(current_user)
         
@@ -122,6 +122,7 @@ def add_file():
         'message': 'File uploaded successfully',
         'filename': filename,
         'owner': current_user.username,
+        'file_group': None,
         'size': file_size,
         'permissions': permissions
     }), 201
