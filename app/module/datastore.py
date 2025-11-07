@@ -71,15 +71,6 @@ def create_archive(user):
         
     db.session.commit()
 
-def octal_to_string(octal):
-    permission = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"]
-    result = "-"
-
-    for i in [int(n) for n in str(octal)]:
-        result += permission[i]
-
-    return result
-
 @datastore.route('/archive-list')
 @login_required
 def list_archives():
@@ -95,15 +86,13 @@ def retrieve_user_store():
 
         # Use metadata database for file listing
         metadata = UserMetadata(current_user.store_path)
-        try:
-            files = metadata.get_files()
-            if files:
-                return files
-            else:
-                return []
-        except:
-            pass
-
+        files = metadata.get_files()
+        print(files)
+        if files:
+            return files
+        else:
+            return []
+            
 @datastore.route('/add', methods=['POST'])
 @login_required
 def add_file():
@@ -125,13 +114,15 @@ def add_file():
     # Add to metadata database
     file_size = os.path.getsize(filepath)
     metadata = UserMetadata(current_user.store_path)
-    metadata.add_file(filename, file_size, permissions)
+    metadata.add_file(filename, current_user.username, file_size, permissions, file_group=None)
 
     create_archive(current_user)
         
     return jsonify({
         'message': 'File uploaded successfully',
         'filename': filename,
+        'owner': current_user.username,
+        'file_group': None,
         'size': file_size,
         'permissions': permissions
     }), 201
