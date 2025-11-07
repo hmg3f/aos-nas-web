@@ -132,6 +132,11 @@ body {
     padding: 4px;
 }
 
+#file-view table td {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
 #file-view table th:nth-child(1), 
 #file-view table td:nth-child(1),
 #file-view table th:nth-child(2), 
