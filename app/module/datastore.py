@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 
 from module.util import db
 from module.metadata import UserMetadata
+from module.metadata_user_management import UserManager
 
 datastore = Blueprint('/store', __name__)
 
@@ -164,3 +165,34 @@ def delete_multiple():
     create_archive(current_user)
 
     return jsonify({'message': 'Files deleted successfully'}), 200
+
+@datastore.route('/profile')
+@login_required
+def profile():
+    user_manager = UserManager(get_metadb_path(current_user))
+    user_info = user_manager.get_user_info(current_user.username)
+    return jsonify(user_info)
+
+@datastore.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    user_manager = UserManager(get_metadb_path(current_user))
+    data = request.get_json()
+    success = user_manager.change_password(
+        current_user.username,
+        data['target_user'],
+        data['new_password']
+    )
+    return jsonify({'success': success})
+
+@datastore.route('/change-name', methods=['POST'])
+@login_required
+def change_display_name():
+    user_manager = UserManager(get_metadb_path(current_user))
+    data = request.get_json()
+    success = user_manager.change_display_name(
+        current_user.username,
+        data['target_user'],
+        data['new_display_name']
+    )
+    return jsonify({'success': success})
