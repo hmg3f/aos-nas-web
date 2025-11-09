@@ -7,6 +7,7 @@ import hashlib
 import difflib
 import time
 import datetime
+import shutil
 
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
@@ -67,9 +68,7 @@ def create_archive(user):
     original_cwd = os.getcwd()
     os.chdir(user.store_path)
 
-    mounted = get_mount_path(user)
-    if os.path.ismount(mounted):
-        borg_api.umount(mounted)
+    borg_unmount(user)
 
     print(f"info:\ncwd: {os.getcwd()}")
     
@@ -85,12 +84,20 @@ def create_archive(user):
     db.session.commit()
     os.chdir(original_cwd)
 
-def find_archive_by_id(id, archives):
+def find_archive_by_id(id):
+    archives = list_archives()
+    
     for archive in archives:
         if archive['id'] == id:
             return archive
         
     return None
+
+def borg_unmount(user):
+    mount_path = os.path.join(user.store_path, 'mount')
+    
+    if os.path.ismount(mount_path):
+        borg_api.umount(mount_path)
 
 @datastore.route('/archive-list')
 @login_required
@@ -124,15 +131,13 @@ def get_diff(archive):
     mount_path = get_mount_path(current_user)
     stage_path = get_user_tree_path(current_user)
     repo_path = get_repo_path(current_user)
-
-    archives = list_archives()
-    mount_archive = find_archive_by_id(archive, archives)['archive']
+    
+    mount_archive = find_archive_by_id(archive)['archive']
 
     if not mount_archive:
         return jsonify({'error': 'Archive does not exist'}), 400
 
-    if os.path.ismount(mount_path):
-        borg_api.umount(mount_path)
+    borg_unmount(current_user)
 
     borg_api.mount(f"{repo_path}::{mount_archive}", mount_path)
     
@@ -141,14 +146,33 @@ def get_diff(archive):
         time.sleep(.01)
 
     result = subprocess.Popen(
-        ['git', 'diff', '--no-index', "mount/stage/tree", "stage/tree"],
+        ['git', 'diff', '--no-index', "stage/tree", "mount/stage/tree"],
         stdout=subprocess.PIPE,
         text=True
     )
     output, error = result.communicate()
 
     os.chdir(original_cwd)
+    borg_unmount(current_user)
     return jsonify({"diff": output})
+
+@datastore.route('/restore/<archive>', methods=['POST'])
+@login_required
+def restore_archive(archive):
+    stage_path = get_stage_path(current_user)
+    repo_path = get_repo_path(current_user)
+    archive_name = find_archive_by_id(archive)['archive']
+    
+    borg_unmount(current_user)
+
+    shutil.rmtree(stage_path)
+
+    original_cwd = os.getcwd()
+    os.chdir(current_user.store_path)
+    borg_api.extract(f"{repo_path}::{archive_name}", "stage")
+    os.chdir(original_cwd)
+
+    return jsonify({"message": "Archive restored successfully"}), 200
             
 @datastore.route('/add', methods=['POST'])
 @login_required

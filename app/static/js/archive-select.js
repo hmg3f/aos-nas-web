@@ -43,6 +43,11 @@ document.addEventListener('DOMContentLoaded', function () {
             displayDiff(selectedArchive);
 	}
     }
+
+    function resetSelector() {
+	const options = Array.from(backupSelector.options);
+	backupSelector.selectedIndex = options.length - 1;
+    }
     
     function updateButtons() {
         const options = Array.from(backupSelector.options);
@@ -89,14 +94,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Handle revert action
     revertButton.addEventListener('click', function () {
-        const selectedBackup = backupSelector.value;
-        if (selectedBackup) {
-            alert(`Reverting to backup: ${selectedBackup}`);
-            // TODO: call restore archive endpoint
-        }
-    });
+    const selectedBackup = backupSelector.value;
+    if (selectedBackup) {
+        fetch(`/store/restore/${selectedBackup}`, {
+            method: 'POST',
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    alert(`Failed to restore archive: ${errorData.error || 'Unknown error'}`);
+                });
+            }
 
-    // Initial button states
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message || 'Archive restored successfully');
+	    
+	    setTimeout(() => {
+		window.location.reload();
+	    }, 2000);
+        })
+        .catch(error => {
+            console.error('Error during restore:', error);
+            alert('An error occurred while restoring the archive.');
+        });
+    } else {
+        alert('Please select a backup to restore.');
+    }
+});
+    resetSelector();
     updateButtons();
     updateDiff();
 });
