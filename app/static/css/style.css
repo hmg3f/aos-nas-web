@@ -171,6 +171,34 @@ body {
     color: #fff;
 }
 
+#file-context-menu {
+    background-color: #1e1e1e;
+    border: 1px solid #989898;
+    padding: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    width: 150px;
+}
+
+#file-context-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#file-context-menu li {
+    padding: 4px;
+}
+
+#file-context-menu li a {
+    text-decoration: none;
+    color: #646464;
+    display: block;
+}
+
+#file-context-menu li a:hover {
+    background-color: #f0f0f0;
+}
+
 .subpanel {
     padding: 10px;
 }

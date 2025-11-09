@@ -9,7 +9,7 @@ import time
 import datetime
 import shutil
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_from_directory
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -30,7 +30,7 @@ def get_repo_path(user):
             borg_api.init(path, make_parent_dirs=True, encryption="repokey", storage_quota=user.quota)
         else:
             borg_api.init(path, make_parent_dirs=True, encryption="repokey")
-        
+            
     return path
 
 def get_or_create_dir(path):
@@ -173,7 +173,7 @@ def restore_archive(archive):
     os.chdir(original_cwd)
 
     return jsonify({"message": "Archive restored successfully"}), 200
-            
+
 @datastore.route('/add', methods=['POST'])
 @login_required
 def add_file():
@@ -189,7 +189,7 @@ def add_file():
     
     filename = secure_filename(file.filename)
     filepath = os.path.join(get_user_tree_path(current_user), filename)
-        
+    
     file.save(filepath)
     
     # Add to metadata database
@@ -198,7 +198,7 @@ def add_file():
     metadata.add_file(filename, current_user.username, file_size, permissions, file_group=None)
 
     create_archive(current_user)
-        
+    
     return jsonify({
         'message': 'File uploaded successfully',
         'filename': filename,
@@ -231,7 +231,7 @@ def delete_file(filename, archive=True):
 
     if archive:
         create_archive(current_user)
-    
+        
     return jsonify({'message': 'File deleted successfully'}), 200
 
 @datastore.route('/delete-multiple', methods=['DELETE'])
@@ -245,6 +245,56 @@ def delete_multiple():
     create_archive(current_user)
 
     return jsonify({'message': 'Files deleted successfully'}), 200
+
+@datastore.route('/download/<file_id>')
+@login_required
+def download_file(file_id):
+    metadata = UserMetadata(current_user.store_path)
+    file_data = metadata.get_file_path_by_id(file_id)
+
+    if not file_data:
+        return jsonify({'error': 'File not found'}), 404
+
+    file_name, file_path = file_data
+    if file_path == '/':
+        file_path = get_user_tree_path(current_user)
+    else:
+        file_path = os.path.join(get_user_tree_path(current_user), file_path)
+
+    print(f"path: {file_path}\nname: {file_name}")
+
+    return send_from_directory(file_path, file_name, as_attachment=True)
+
+
+@datastore.route('/rename/<file_id>', methods=['POST'])
+@login_required
+def rename_file(file_id):
+    metadata = UserMetadata(current_user.store_path)
+    file_data = metadata.get_file_path_by_id(file_id)
+
+    if not file_data:
+        return jsonify({'error': 'File not found'}), 404
+
+    file_name, file_path = file_data
+    if file_path == '/':
+        current_path = get_user_tree_path(current_user)
+    else:
+        current_path = os.path.join(get_user_tree_path(current_user), file_path)
+        
+    current_file = os.path.join(current_path, file_name)
+
+    new_name = request.json.get('new_name').strip()
+
+    if not new_name:
+        return jsonify({'error': 'No name given'}), 400
+
+    # TODO: support directory rename
+    new_file = os.path.join(current_path, new_name)
+
+    os.rename(current_file, new_file)
+    metadata.rename_file(new_name, file_path, file_id)
+
+    return jsonify({'success': 'File renamed successfully'}), 200
 
 @datastore.route('/profile')
 @login_required
