@@ -4,8 +4,10 @@ import sqlite3
 import borgapi
 import tempfile
 import hashlib
-
+import difflib
+import time
 import datetime
+
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
@@ -62,21 +64,30 @@ def get_mount_path(user):
 
 def create_archive(user):
     """create a new archive for USER."""
-    current_time = datetime.datetime.now()
+    original_cwd = os.getcwd()
+    os.chdir(user.store_path)
     
-    stage_path = get_stage_path(user)
+    current_time = datetime.datetime.now()
     repo_path = get_repo_path(user)
 
     user.archive_state = current_time.strftime(f"{repo_path}::%Y-%m-%d_%H:%M:%S")
-    borg_api.create(user.archive_state, stage_path)
+    borg_api.create(user.archive_state, 'stage')
         
     db.session.commit()
+    os.chdir(original_cwd)
+
+def find_archive_by_id(id, archives):
+    for archive in archives:
+        if archive['id'] == id:
+            return archive
+        
+    return None
 
 @datastore.route('/archive-list')
 @login_required
 def list_archives():
     repo_path = get_repo_path(current_user)
-    return borg_api.list(repo_path, json=True)
+    return borg_api.list(repo_path, json=True)['archives']
 
 @datastore.route('/retrieve')
 @login_required
@@ -93,6 +104,42 @@ def retrieve_user_store():
             return files
         else:
             return []
+
+@datastore.route('/diff/<archive>', methods=['GET'])
+@login_required
+def get_diff(archive):
+    original_cwd = os.getcwd()
+    os.chdir(current_user.store_path)
+    
+    current_archive = current_user.archive_state
+    mount_path = get_mount_path(current_user)
+    stage_path = get_user_tree_path(current_user)
+    repo_path = get_repo_path(current_user)
+
+    archives = list_archives()
+    mount_archive = find_archive_by_id(archive, archives)['archive']
+
+    if not mount_archive:
+        return jsonify({'error': 'Archive does not exist'}), 400
+
+    if os.path.ismount(mount_path):
+        borg_api.umount(mount_path)
+
+    borg_api.mount(f"{repo_path}::{mount_archive}", mount_path)
+    
+    while not os.path.ismount(mount_path):
+        print(f"Waiting for mount at {mount_path}...")
+        time.sleep(.01)
+
+    result = subprocess.Popen(
+        ['git', 'diff', '--no-index', "mount/stage/tree", "stage/tree"],
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    output, error = result.communicate()
+
+    os.chdir(original_cwd)
+    return jsonify({"diff": output})
             
 @datastore.route('/add', methods=['POST'])
 @login_required

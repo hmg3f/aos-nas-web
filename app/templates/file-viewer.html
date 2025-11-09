@@ -2,6 +2,14 @@
 
 {% block page_title %}File Viewer{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
+{% endblock %}
+
+{% block preload_scripts %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <section id="file-view" class="panel">
   <h1>Files</h1>
@@ -91,10 +99,30 @@
       <div id="upload-status"></div>
     </form>
   </section>
+
+  <section id="archive-manager" class="subpanel">
+    <h2>Archive Manager</h2>
+
+    <div class="selector">
+      <button id="previous-archive" class="archive-nav" disabled>◀</button>
+      <select id="archive-selector">
+	{% for archive in archive_list %}
+	<option value="{{ archive['id'] }}">{{ archive['name'] }}</option>
+	{% endfor %}
+	<option value="" disabled selected>select previous archive...</option>
+      </select>
+      <button id="next-archive" class="archive-nav">▶</button>
+    </div>
+
+    <div id="diff-viewer"></div>
+    
+    <button id="revert-archive" disabled>Revert to Archive</button>
+  </section>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/upload-handler.js') }}"></script>
 <script src="{{ url_for('static', filename='js/file-delete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/archive-select.js') }}"></script>
 {% endblock %}
