@@ -36,7 +36,7 @@
 	  <input type="checkbox" class="file-checkbox" data-filename="{{ name }}">
 	</td>
 	<td>
-	  <a href="{{ url_for('/store.download_file', file_id=id) }}" class="overflow-hidden">
+	  <a href="{{ url_for('/store.download_file', file_id=id) }}" class="overflow-hidden file-listing" data-id="{{ id }}">
 	    {{ name }}
 	  </a>
 	</td>
@@ -48,6 +48,13 @@
       {% endfor %}
     </tbody>
   </table>
+  
+  <div id="file-context-menu" style="display:none; position:absolute; z-index:1000";>
+    <ul>
+      <li><a href="#" id="download-option">Download</a></li>
+      <li><a href="#" id="rename-option">Rename</a></li>
+    </ul>
+  </div>
 </section>
 
 <section id="toolbox" class="panel">
@@ -129,4 +136,5 @@
 <script src="{{ url_for('static', filename='js/upload-handler.js') }}"></script>
 <script src="{{ url_for('static', filename='js/file-delete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/archive-select.js') }}"></script>
+<script src="{{ url_for('static', filename='js/file-context.js') }}"></script>
 {% endblock %}

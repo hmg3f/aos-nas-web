@@ -283,7 +283,7 @@ def rename_file(file_id):
         
     current_file = os.path.join(current_path, file_name)
 
-    new_name = request.form.get('new_name').strip()
+    new_name = request.json.get('new_name').strip()
 
     if not new_name:
         return jsonify({'error': 'No name given'}), 400
@@ -294,7 +294,7 @@ def rename_file(file_id):
     os.rename(current_file, new_file)
     metadata.rename_file(new_name, file_path, file_id)
 
-    return jsonify({'message': 'File renamed successfully'}), 200
+    return jsonify({'success': 'File renamed successfully'}), 200
 
 @datastore.route('/profile')
 @login_required
