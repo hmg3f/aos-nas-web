@@ -4,7 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 
-from module.datastore import datastore, retrieve_user_store
+from module.datastore import datastore, retrieve_user_store, list_archives
 from module.util import convert_to_bytes, app, db, bcrypt
 
 import os
@@ -94,7 +94,8 @@ def logout():
 @login_required
 def file_viewer():
     file_list = retrieve_user_store()
-    return render_template('file-viewer.html', file_list=file_list)
+    archive_list = list_archives()
+    return render_template('file-viewer.html', file_list=file_list, archive_list=archive_list)
 
 @app.route('/create', methods=['GET', 'POST'])
 def create_user():

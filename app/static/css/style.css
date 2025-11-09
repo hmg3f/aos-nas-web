@@ -210,3 +210,27 @@ body {
     border: 1px solid #989898;
     max-width: 310px;
 }
+
+#diff-panel {
+    height: 330px;
+    width: 400px;
+    padding: 10px;
+    /* background-color: #1e1e1e; */
+    border: 1px solid #989898;
+    margin-top: 20px;
+}
+
+#diff-panel h3 {
+    position: relative;
+    top: -1.25rem;
+    background-color: #303030;
+    display: inline;
+    padding: 3px;
+}
+
+#diff-viewer {
+    position: absolute;
+    overflow: auto;
+    height: 300px;
+    width: 400px;
+}
