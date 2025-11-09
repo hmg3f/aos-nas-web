@@ -1,0 +1,10 @@
+:root {
+    --d2h-dark-color: #fff;
+    --d2h-dark-bg-color: #1e1e1e;
+    --d2h-dark-file-header-bg-color: #1e1e1e;
+    --d2h-dark-info-bg-color: rgba(120, 120, 120, 0.1);
+    --d2h-dark-info-border-color: #989898;
+    --d2h-dark-border-color: #646464
+
+    --d2h-moved-label-color: #c6daff
+}

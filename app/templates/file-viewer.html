@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/diff.css') }}">
 {% endblock %}
 
 {% block preload_scripts %}
@@ -114,7 +115,10 @@
       <button id="next-archive" class="archive-nav">▶</button>
     </div>
 
-    <div id="diff-viewer"></div>
+    <div id="diff-panel">
+      <h3>Diff View</h3>
+      <div id="diff-viewer"></div>
+    </div>
     
     <button id="revert-archive" disabled>Revert to Archive</button>
   </section>

@@ -28,12 +28,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		} else {
 		    // Handle case where the 'diff' key is not present in the response
 		    console.error('No diff found in the response.');
+		    diffViewer.innerHTML = 'Identical to current tree';
 		}
 	    })
 	    .catch(error => {
 		console.error('Error fetching the diff:', error);
 	    });
 
+    }
+
+    function updateDiff() {
+	const selectedArchive = backupSelector.value;
+	if (selectedArchive) {
+            displayDiff(selectedArchive);
+	}
     }
     
     function updateButtons() {
@@ -54,10 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
     backupSelector.addEventListener('change', function () {
         updateButtons();
 
-	const selectedArchive = backupSelector.value;
-        if (selectedArchive) {
-            displayDiff(selectedArchive);
-        }
+	updateDiff();
     });
 
     // Handle previous button click
@@ -67,6 +72,8 @@ document.addEventListener('DOMContentLoaded', function () {
             backupSelector.selectedIndex = selectedIndex - 1;
             updateButtons();
         }
+
+	updateDiff();
     });
 
     // Handle next button click
@@ -76,6 +83,8 @@ document.addEventListener('DOMContentLoaded', function () {
             backupSelector.selectedIndex = selectedIndex + 1;
             updateButtons();
         }
+
+	updateDiff();
     });
 
     // Handle revert action
@@ -89,4 +98,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initial button states
     updateButtons();
+    updateDiff();
 });

@@ -66,13 +66,22 @@ def create_archive(user):
     """create a new archive for USER."""
     original_cwd = os.getcwd()
     os.chdir(user.store_path)
+
+    mounted = get_mount_path(user)
+    if os.path.ismount(mounted):
+        borg_api.umount(mounted)
+
+    print(f"info:\ncwd: {os.getcwd()}")
     
     current_time = datetime.datetime.now()
     repo_path = get_repo_path(user)
 
     user.archive_state = current_time.strftime(f"{repo_path}::%Y-%m-%d_%H:%M:%S")
+    print(f"archive_state: {user.archive_state}")
     borg_api.create(user.archive_state, 'stage')
-        
+
+    print('staged')
+    
     db.session.commit()
     os.chdir(original_cwd)
 
