@@ -1,0 +1,22 @@
+.performance_window {
+	display: flex;
+	justify-content: center;
+}
+
+.performance_title {
+	text-align: center;
+}
+
+a.performance_links {
+	color: white;
+	text-decoration: none;
+}
+
+a.performance_links:visited {
+	color: white;
+}
+
+a.performance_links:hover {
+	color: grey;
+	text-decoration: underline;
+}
