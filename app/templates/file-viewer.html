@@ -30,13 +30,13 @@
       </tr>
     </thead>
     <tbody>
-      {% for name, owner, group, size, permissions in file_list %}
+      {% for id, name, owner, group, size, permissions in file_list %}
       <tr>
 	<td>
 	  <input type="checkbox" class="file-checkbox" data-filename="{{ name }}">
 	</td>
 	<td>
-	  <a href="" class="overflow-hidden">
+	  <a href="{{ url_for('/store.download_file', file_id=id) }}" class="overflow-hidden">
 	    {{ name }}
 	  </a>
 	</td>
