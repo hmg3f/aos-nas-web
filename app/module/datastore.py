@@ -318,3 +318,15 @@ def change_display_name():
         data['new_display_name']
     )
     return jsonify({'success': success})
+
+@datastore.route('/delete-user', methods=['DELETE'])
+@login_required
+def delete_user_account():
+    """Delete a user account"""
+    user_manager = UserManager(get_metadb_path(current_user))
+    data = request.get_json()
+    success = user_manager.delete_user(
+        current_user.username,
+        data['target_user']
+    )
+    return jsonify({'success': success})

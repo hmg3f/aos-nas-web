@@ -107,3 +107,25 @@ class UserManager:
                 accessible_users.append(user)
         
         return accessible_users
+    
+    def delete_user(self, modifier_username, target_username):
+        """Delete a user account"""
+        # Check if modifier can modify target user
+        if not self.can_modify_user(modifier_username, target_username):
+            return False
+        
+        # Prevent users from deleting themselves
+        if modifier_username == target_username:
+            return False
+        
+        # Root users can only be deleted by other root users
+        target_role = self.get_user_role(target_username)
+        modifier_role = self.get_user_role(modifier_username)
+        if target_role == 'root' and modifier_role != 'root':
+            return False
+        
+        conn = sqlite3.connect(self.db_path)
+        conn.execute('DELETE FROM users WHERE username = ?', (target_username,))
+        conn.commit()
+        conn.close()
+        return True
