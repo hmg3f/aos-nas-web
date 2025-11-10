@@ -34,8 +34,10 @@ login_manager.login_view = "login"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
 def gen_quota_selections(quotas):
     return [(None, 'None')] + [(size, size) for size in quotas]
+
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -46,6 +48,27 @@ class User(db.Model, UserMixin):
     store_path = db.Column(db.String, nullable=False, unique=True)
     archive_state = db.Column(db.String, nullable=True, default=None)
     num_files = db.Column(db.Integer, nullable=False, default=0)
+    enabled = db.Column(db.Boolean, nullable=False, default=True)
+    flags = db.Column(db.Integer, nullable=False, default=0)
+
+    # Flags
+    ADMIN = 1
+
+    def set_flag(self, flag):
+        if not self.flags:
+            self.flags = 0
+        self.flags |= flag
+
+    def unset_flag(self, flag):
+        if not self.flags:
+            self.flags = 0
+        self.flags &= ~flag
+
+    def has_flag(self, flag):
+        if not self.flags:
+            self.flags = 0
+        return (self.flags & flag) > 0
+    
 
 class RegisterForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
@@ -56,6 +79,7 @@ class RegisterForm(FlaskForm):
                            render_kw={'placeholder': 'Password'})
     quota = SelectField('Quota', choices=gen_quota_selections(['100M', '512M', '1G', '5G']))
     submit = SubmitField('Create Account')
+    
 
 class LoginForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
@@ -65,10 +89,12 @@ class LoginForm(FlaskForm):
                                          Length(min=4, max=40)],
                            render_kw={'placeholder': 'Password'})
     submit = SubmitField('Login')
+    
 
 @app.route('/')
 def home():
     return render_template('home.html', files_num=42)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -86,12 +112,14 @@ def login():
                 
     return render_template('login.html', form=form)
 
+
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     auth_logger.info(f'User logged out: {current_user.username}')
     logout_user()
     return redirect(url_for('home'))
+
 
 @app.route('/files', methods=['GET', 'POST'])
 @login_required
@@ -100,15 +128,18 @@ def file_viewer():
     archive_list = list_archives()
     return render_template('file-viewer.html', file_list=file_list, archive_list=archive_list)
 
+
 @app.route('/create', methods=['GET', 'POST'])
 def create_user():
     form = RegisterForm()
 
     if form.validate_on_submit():
         password_hash = bcrypt.generate_password_hash(form.password.data)
+        
         m = hashlib.sha256()
         m.update(str(round(time.time())).encode('utf-8'))
         m.update(form.username.data.encode('utf-8'))
+        
         user_dir = m.hexdigest()[:5]
         store_path = os.path.join(DATABASE_PATH, user_dir)
         
@@ -126,8 +157,35 @@ def create_user():
     return render_template('create.html', form=form)
 
 
+def create_admin_user():
+    admin_user = User.query.filter_by(username='admin').first()
+    if not admin_user:
+        admin_password = os.getenv('ADMIN_PASSWORD', 'admin')
+        password_hash = bcrypt.generate_password_hash(admin_password)
+        
+        m = hashlib.sha256()
+        m.update(str(round(time.time())).encode('utf-8'))
+        m.update('admin'.encode('utf-8'))
+        
+        user_dir = m.hexdigest()[:5]
+        store_path = os.path.join(DATABASE_PATH, user_dir)
+
+        admin_user = User(username='admin',
+                          password=password_hash,
+                          quota=None,
+                          store_path=store_path,
+                          flags=User.ADMIN)
+        
+        # admin_user.set_flag(User.ADMIN)
+        db.session.add(admin_user)
+        db.session.commit()
+        
+        auth_logger.info(f'Admin user created: {admin_user.username}')
+
+        
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        create_admin_user()
         
     app.run(debug=True)
