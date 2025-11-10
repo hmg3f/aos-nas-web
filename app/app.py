@@ -1,8 +1,9 @@
-from flask import render_template, url_for, redirect
+from flask import render_template, url_for, redirect, flash
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
-from wtforms.validators import InputRequired, Length, ValidationError
+from wtforms.validators import InputRequired, Length, EqualTo, Optional
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from module.datastore import datastore, retrieve_user_store, list_archives
 from module.util import app, db, bcrypt, auth_logger
@@ -72,7 +73,7 @@ class User(db.Model, UserMixin):
 
 class RegisterForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
-                                       Length(min=4, max=20)],
+                                       Length(min=2, max=20)],
                            render_kw={'placeholder': 'Username'})
     password = PasswordField(validators=[InputRequired(),
                                          Length(min=4, max=40)],
@@ -89,6 +90,14 @@ class LoginForm(FlaskForm):
                                          Length(min=4, max=40)],
                            render_kw={'placeholder': 'Password'})
     submit = SubmitField('Login')
+
+
+class AccountManagementForm(FlaskForm):
+    username = StringField('Username', validators=[InputRequired(), Length(min=2, max=20)])
+    current_password = PasswordField('Current Password', validators=[InputRequired(), Length(min=4, max=40)])
+    new_password = PasswordField('New Password', validators=[Optional(), Length(min=4, max=40)])
+    confirm_password = PasswordField('Confirm New Password', validators=[EqualTo('new_password', message='Passwords must match')])
+    submit = SubmitField('Update Account')
     
 
 @app.route('/')
@@ -102,7 +111,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
-            if bcrypt.check_password_hash(user.password, form.password.data):
+            if check_password_hash(user.password, form.password.data):
                 login_user(user)
                 auth_logger.info(f'User logged in: {user.username}')
                 
@@ -121,6 +130,32 @@ def logout():
     return redirect(url_for('home'))
 
 
+@app.route('/account', methods=['GET', 'POST'])
+@login_required
+def account_manager():
+    form = AccountManagementForm()
+
+    if form.validate_on_submit():
+        # Handle Username change
+        print(f"FORM USERNAME DATA: {form.username.data}")
+        if form.username.data != current_user.username:
+            current_user.username = form.username.data
+        
+        # Handle Password change
+        if form.new_password.data:
+            if check_password_hash(current_user.password, form.current_password.data):
+                current_user.password = generate_password_hash(form.new_password.data)
+            else:
+                flash('Current password is incorrect.', 'error')
+                return redirect(url_for('account_manager'))
+        
+        db.session.commit()
+        flash('Your account has been updated.', 'success')
+        return redirect(url_for('account_manager'))
+
+    return render_template('account.html', form=form)
+
+
 @app.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
@@ -134,7 +169,7 @@ def create_user():
     form = RegisterForm()
 
     if form.validate_on_submit():
-        password_hash = bcrypt.generate_password_hash(form.password.data)
+        password_hash = generate_password_hash(form.password.data)
         
         m = hashlib.sha256()
         m.update(str(round(time.time())).encode('utf-8'))
@@ -161,7 +196,7 @@ def create_admin_user():
     admin_user = User.query.filter_by(username='admin').first()
     if not admin_user:
         admin_password = os.getenv('ADMIN_PASSWORD', 'admin')
-        password_hash = bcrypt.generate_password_hash(admin_password)
+        password_hash = generate_password_hash(admin_password)
         
         m = hashlib.sha256()
         m.update(str(round(time.time())).encode('utf-8'))
