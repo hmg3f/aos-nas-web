@@ -52,7 +52,5 @@ def octal_to_string(octal):
     
     for i in [int(n) for n in str(octal)]:
         result += permission[i]
-
-    print(result)
         
     return result
