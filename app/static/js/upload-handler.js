@@ -28,6 +28,9 @@ document.getElementById('upload-form').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
+
+    const groupInput = document.getElementById('group-input');
+    formData.append('file-group', groupInput.value);
     
     const octal = calculateOctalPermissions();
     formData.append('permissions', octal);

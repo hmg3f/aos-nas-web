@@ -28,7 +28,7 @@ class UserMetadata:
         conn.commit()
         conn.close()
         
-    def add_file(self, filename, owner, size, permissions=740, file_group=None, path='/', file_hash=None):
+    def add_file(self, filename, owner, file_group, size, permissions=740, path='/', file_hash=None):
         if not file_group:
             file_group = owner
         

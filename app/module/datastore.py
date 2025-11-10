@@ -186,6 +186,7 @@ def add_file():
         return jsonify({'error': 'No selected file'}), 400
     
     permissions = request.form.get('permissions', 740)
+    file_group = request.form.get('file-group', None)
     
     filename = secure_filename(file.filename)
     filepath = os.path.join(get_user_tree_path(current_user), filename)
@@ -195,7 +196,7 @@ def add_file():
     # Add to metadata database
     file_size = os.path.getsize(filepath)
     metadata = UserMetadata(current_user.store_path)
-    metadata.add_file(filename, current_user.username, file_size, permissions, file_group=None)
+    metadata.add_file(filename, current_user.username, file_group, file_size, permissions)
 
     create_archive(current_user)
     
@@ -203,7 +204,7 @@ def add_file():
         'message': 'File uploaded successfully',
         'filename': filename,
         'owner': current_user.username,
-        'file_group': None,
+        'file_group': file_group,
         'size': file_size,
         'permissions': permissions
     }), 201
