@@ -5,7 +5,7 @@ from wtforms import StringField, PasswordField, SelectField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 
 from module.datastore import datastore, retrieve_user_store, list_archives
-from module.util import convert_to_bytes, app, db, bcrypt
+from module.util import app, db, bcrypt, auth_logger
 
 import os
 import hashlib
@@ -33,9 +33,6 @@ login_manager.login_view = "login"
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
-# def gen_quota_selections(quotas):
-#     return [(None, 'None')] + [(convert_to_bytes(size), size) for size in quotas]
 
 def gen_quota_selections(quotas):
     return [(None, 'None')] + [(size, size) for size in quotas]
@@ -81,12 +78,18 @@ def login():
         if user:
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
+                auth_logger.info(f'User logged in: {user.username}')
+                
                 return redirect(url_for('file_viewer'))
+            else:
+                auth_logger.warn(f'Login failed for: {user.username}')
+                
     return render_template('login.html', form=form)
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
+    auth_logger.info(f'User logged out: {current_user.username}')
     logout_user()
     return redirect(url_for('home'))
 
@@ -116,9 +119,12 @@ def create_user():
         db.session.add(user)
         db.session.commit()
 
+        auth_logger.info(f'User created: {user.username}')
+
         return redirect(url_for('login'))
     
     return render_template('create.html', form=form)
+
 
 if __name__ == '__main__':
     with app.app_context():

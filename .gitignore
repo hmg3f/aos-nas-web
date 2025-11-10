@@ -2,3 +2,4 @@ __pycache__/
 .venv
 /app/store/
 app/store/nasinfo.db
+/app/log/

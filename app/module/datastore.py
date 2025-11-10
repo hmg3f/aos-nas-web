@@ -1,10 +1,6 @@
 import os
 import subprocess
-import sqlite3
 import borgapi
-import tempfile
-import hashlib
-import difflib
 import time
 import datetime
 import shutil
@@ -13,7 +9,7 @@ from flask import Blueprint, request, jsonify, send_from_directory
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
-from module.util import db
+from module.util import db, store_logger
 from module.metadata import UserMetadata
 from module.metadata_user_management import UserManager
 
@@ -77,6 +73,8 @@ def create_archive(user):
     
     db.session.commit()
     os.chdir(original_cwd)
+
+    store_logger.info(f'User {user.username} created a new archive: {user.archive_state}')
 
 def find_archive_by_id(id):
     archives = list_archives()
@@ -165,6 +163,8 @@ def restore_archive(archive):
     borg_api.extract(f"{repo_path}::{archive_name}", "stage")
     os.chdir(original_cwd)
 
+    store_logger.info(f'User {current_user.username} restored archive to version: {archive_name}')
+
     return jsonify({"message": "Archive restored successfully"}), 200
 
 @datastore.route('/add', methods=['POST'])
@@ -192,6 +192,8 @@ def add_file():
     metadata.add_file(filename, current_user.username, file_group, file_size, permissions)
 
     create_archive(current_user)
+
+    store_logger.info(f'User {current_user.username} added file: {filename}')
     
     return jsonify({
         'message': 'File uploaded successfully',
@@ -225,7 +227,9 @@ def delete_file(filename, archive=True):
 
     if archive:
         create_archive(current_user)
-        
+
+    store_logger.info(f'User {current_user.username} deleted file: {filepath}')
+    
     return jsonify({'message': 'File deleted successfully'}), 200
 
 @datastore.route('/delete-multiple', methods=['DELETE'])
@@ -254,6 +258,8 @@ def download_file(file_id):
         file_path = get_user_tree_path(current_user)
     else:
         file_path = os.path.join(get_user_tree_path(current_user), file_path)
+
+    store_logger.info(f'User {current_user.username} downloaded file: {file_path}')
 
     return send_from_directory(file_path, file_name, as_attachment=True)
 
@@ -285,6 +291,8 @@ def rename_file(file_id):
 
     os.rename(current_file, new_file)
     metadata.rename_file(new_name, file_path, file_id)
+
+    store_logger.info(f'User {current_user.username} renamed file: {current_file} to: {new_file}')
 
     return jsonify({'success': 'File renamed successfully'}), 200
 

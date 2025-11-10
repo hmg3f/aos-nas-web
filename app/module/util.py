@@ -1,13 +1,50 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from logging.handlers import RotatingFileHandler
 
 import re
 import os
+import logging
 
 db = SQLAlchemy()
 app = Flask("__main__")
 bcrypt = Bcrypt(app)
+
+logdir = os.path.join(os.getcwd(), 'log')
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+log_formatter = logging.Formatter(
+    '[{asctime}]::{levelname} - {message}',
+    style='{',
+    datefmt='%Y-%m-%d_%H:%M:%S'
+)
+
+auth_logfile = os.path.join(logdir, 'auth.log')
+auth_handler = RotatingFileHandler(
+    auth_logfile,
+    maxBytes=1 * 1024 * 1024,  # Rotate at 1MB
+    backupCount=5
+)
+auth_handler.setFormatter(log_formatter)
+
+auth_logger = logging.getLogger("auth")
+auth_logger.setLevel(logging.INFO)
+auth_logger.addHandler(auth_handler)
+
+
+store_logfile = os.path.join(logdir, 'store.log')
+store_handler = RotatingFileHandler(
+    store_logfile,
+    maxBytes=1 * 1024 * 1024,  # Rotate at 1MB
+    backupCount=5
+)
+store_handler.setFormatter(log_formatter)
+
+store_logger = logging.getLogger("store-log")
+store_logger.setLevel(logging.INFO)
+store_logger.addHandler(store_handler)
 
 def convert_to_bytes(size_str):
     suffixes = {
