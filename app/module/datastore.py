@@ -25,7 +25,6 @@ borg_api.set_environ(BORG_PASSPHRASE="pass")
 def get_repo_path(user):
     path = os.path.join(user.store_path, 'repo')
     if not os.path.exists(path):
-        print(f'user.quota: {user.quota} ({type(user.quota)})')
         if user.quota not in [None, 'None']:
             borg_api.init(path, make_parent_dirs=True, encryption="repokey", storage_quota=user.quota)
         else:
@@ -69,17 +68,12 @@ def create_archive(user):
     os.chdir(user.store_path)
 
     borg_unmount(user)
-
-    print(f"info:\ncwd: {os.getcwd()}")
     
     current_time = datetime.datetime.now()
     repo_path = get_repo_path(user)
 
     user.archive_state = current_time.strftime(f"{repo_path}::%Y-%m-%d_%H:%M:%S")
-    print(f"archive_state: {user.archive_state}")
     borg_api.create(user.archive_state, 'stage')
-
-    print('staged')
     
     db.session.commit()
     os.chdir(original_cwd)
@@ -115,7 +109,6 @@ def retrieve_user_store():
         # Use metadata database for file listing
         metadata = UserMetadata(current_user.store_path)
         files = metadata.get_files()
-        print(files)
         if files:
             return files
         else:
@@ -261,8 +254,6 @@ def download_file(file_id):
         file_path = get_user_tree_path(current_user)
     else:
         file_path = os.path.join(get_user_tree_path(current_user), file_path)
-
-    print(f"path: {file_path}\nname: {file_name}")
 
     return send_from_directory(file_path, file_name, as_attachment=True)
 
