@@ -11,7 +11,6 @@ from werkzeug.utils import secure_filename
 
 from module.util import db, store_logger
 from module.metadata import UserMetadata
-from module.metadata_user_management import UserManager
 
 datastore = Blueprint('/store', __name__)
 
@@ -28,6 +27,7 @@ def get_repo_path(user):
             
     return path
 
+
 def get_or_create_dir(path):
     """return PATH, creating it if it does not exist"""
     if not os.path.exists(path):
@@ -35,9 +35,11 @@ def get_or_create_dir(path):
 
     return path
 
+
 def get_stage_path(user):
     """return path to USER's archive staging directory (/store/stage/)"""
     return get_or_create_dir(os.path.join(user.store_path, 'stage'))
+
 
 def get_metadb_path(user):
     """return path to USER's metadata database (/store/stage/_meta.db)"""
@@ -50,13 +52,16 @@ def get_metadb_path(user):
 
     return path
 
+
 def get_user_tree_path(user):
     """return path to USER's working filetree (/store/stage/tree/)"""
     return get_or_create_dir(os.path.join(get_stage_path(user), 'tree'))
 
+
 def get_mount_path(user):
     """return path to mountpoint for USER's archives (/store/mount/)"""
     return get_or_create_dir(os.path.join(user.store_path, 'mount'))
+
 
 def create_archive(user):
     """create a new archive for USER."""
@@ -76,6 +81,7 @@ def create_archive(user):
 
     store_logger.info(f'User {user.username} created a new archive: {user.archive_state}')
 
+    
 def find_archive_by_id(id):
     archives = list_archives()
     
@@ -85,17 +91,20 @@ def find_archive_by_id(id):
         
     return None
 
+
 def borg_unmount(user):
     mount_path = os.path.join(user.store_path, 'mount')
     
     if os.path.ismount(mount_path):
         borg_api.umount(mount_path)
 
+        
 @datastore.route('/archive-list')
 @login_required
 def list_archives():
     repo_path = get_repo_path(current_user)
     return borg_api.list(repo_path, json=True)['archives']
+
 
 @datastore.route('/retrieve')
 @login_required
@@ -112,6 +121,7 @@ def retrieve_user_store():
         else:
             return []
 
+        
 @datastore.route('/diff/<archive>', methods=['GET'])
 @login_required
 def get_diff(archive):
@@ -147,6 +157,7 @@ def get_diff(archive):
     borg_unmount(current_user)
     return jsonify({"diff": output})
 
+
 @datastore.route('/restore/<archive>', methods=['POST'])
 @login_required
 def restore_archive(archive):
@@ -166,6 +177,7 @@ def restore_archive(archive):
     store_logger.info(f'User {current_user.username} restored archive to version: {archive_name}')
 
     return jsonify({"message": "Archive restored successfully"}), 200
+
 
 @datastore.route('/add', methods=['POST'])
 @login_required
@@ -204,6 +216,7 @@ def add_file():
         'permissions': permissions
     }), 201
 
+
 @datastore.route('/delete/<filename>', methods=['DELETE'])
 @login_required
 def delete_file(filename, archive=True):
@@ -232,6 +245,7 @@ def delete_file(filename, archive=True):
     
     return jsonify({'message': 'File deleted successfully'}), 200
 
+
 @datastore.route('/delete-multiple', methods=['DELETE'])
 @login_required
 def delete_multiple():
@@ -243,6 +257,7 @@ def delete_multiple():
     create_archive(current_user)
 
     return jsonify({'message': 'Files deleted successfully'}), 200
+
 
 @datastore.route('/download/<file_id>')
 @login_required
@@ -295,46 +310,3 @@ def rename_file(file_id):
     store_logger.info(f'User {current_user.username} renamed file: {current_file} to: {new_file}')
 
     return jsonify({'success': 'File renamed successfully'}), 200
-
-@datastore.route('/profile')
-@login_required
-def profile():
-    user_manager = UserManager(get_metadb_path(current_user))
-    user_info = user_manager.get_user_info(current_user.username)
-    return jsonify(user_info)
-
-@datastore.route('/change-password', methods=['POST'])
-@login_required
-def change_password():
-    user_manager = UserManager(get_metadb_path(current_user))
-    data = request.get_json()
-    success = user_manager.change_password(
-        current_user.username,
-        data['target_user'],
-        data['new_password']
-    )
-    return jsonify({'success': success})
-
-@datastore.route('/change-name', methods=['POST'])
-@login_required
-def change_display_name():
-    user_manager = UserManager(get_metadb_path(current_user))
-    data = request.get_json()
-    success = user_manager.change_display_name(
-        current_user.username,
-        data['target_user'],
-        data['new_display_name']
-    )
-    return jsonify({'success': success})
-
-@datastore.route('/delete-user', methods=['DELETE'])
-@login_required
-def delete_user_account():
-    """Delete a user account"""
-    user_manager = UserManager(get_metadb_path(current_user))
-    data = request.get_json()
-    success = user_manager.delete_user(
-        current_user.username,
-        data['target_user']
-    )
-    return jsonify({'success': success})

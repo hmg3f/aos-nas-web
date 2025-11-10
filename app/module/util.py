@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
 from logging.handlers import RotatingFileHandler
 
 import re
@@ -9,7 +8,6 @@ import logging
 
 db = SQLAlchemy()
 app = Flask("__main__")
-bcrypt = Bcrypt(app)
 
 logdir = os.path.join(os.getcwd(), 'log')
 if not os.path.exists(logdir):
@@ -70,6 +68,7 @@ def convert_to_bytes(size_str):
     
     return int(number * suffixes[suffix])
 
+
 def convert_from_bytes(byte_size):
     units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB"]
     
@@ -82,6 +81,7 @@ def convert_from_bytes(byte_size):
         unit_index += 1
     
     return f"{byte_size:.2f} {units[unit_index]}"
+
 
 def octal_to_string(octal):
     permission = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"]

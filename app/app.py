@@ -6,7 +6,7 @@ from wtforms.validators import InputRequired, Length, EqualTo, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from module.datastore import datastore, retrieve_user_store, list_archives
-from module.util import app, db, bcrypt, auth_logger
+from module.util import app, db, auth_logger
 
 import os
 import hashlib
@@ -77,7 +77,7 @@ class RegisterForm(FlaskForm):
                            render_kw={'placeholder': 'Username'})
     password = PasswordField(validators=[InputRequired(),
                                          Length(min=4, max=40)],
-                           render_kw={'placeholder': 'Password'})
+                             render_kw={'placeholder': 'Password'})
     quota = SelectField('Quota', choices=gen_quota_selections(['100M', '512M', '1G', '5G']))
     submit = SubmitField('Create Account')
     
@@ -88,7 +88,7 @@ class LoginForm(FlaskForm):
                            render_kw={'placeholder': 'Username'})
     password = PasswordField(validators=[InputRequired(),
                                          Length(min=4, max=40)],
-                           render_kw={'placeholder': 'Password'})
+                             render_kw={'placeholder': 'Password'})
     submit = SubmitField('Login')
 
 
