@@ -4,12 +4,13 @@ import borgapi
 import time
 import datetime
 import shutil
+import sqlite3
 
 from flask import Blueprint, request, jsonify, send_from_directory, render_template
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
-from module.util import db, store_logger
+from module.util import db, store_logger, convert_from_bytes
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
@@ -107,20 +108,80 @@ def list_archives():
     return borg_api.list(repo_path, json=True)['archives']
 
 
+def calculate_folder_size(user, folder_path):
+    """Return total size (bytes) of all files inside folder_path (direct + recursive)."""
+    metadata = UserMetadata(user.store_path)
+    norm = metadata._sanitize_path(folder_path)
+
+    conn = sqlite3.connect(metadata.db_path)
+    try:
+        if norm == '/':
+            cursor = conn.execute("SELECT size FROM files WHERE path = '/' OR path = ''")
+            sizes = [row[0] for row in cursor.fetchall() if row[0]]
+        else:
+            like = norm.rstrip('/') + '/%'
+            cursor = conn.execute(
+                "SELECT size FROM files WHERE path = ? OR path = ? OR path LIKE ?",
+                (norm, norm + '/', like)
+            )
+            sizes = [row[0] for row in cursor.fetchall() if row[0]]
+    finally:
+        conn.close()
+
+    return sum(sizes)
+
+
 @datastore.route('/retrieve')
 @login_required
 def retrieve_user_store():
     if current_user.is_authenticated:
-        user_tree_path = get_user_tree_path(current_user)
-        metadata_db = get_metadb_path(current_user)
+        get_user_tree_path(current_user)
+        get_metadb_path(current_user)
 
-        # Use metadata database for file listing
         metadata = UserMetadata(current_user.store_path)
-        files = metadata.get_files()
-        if files:
-            return files
-        else:
-            return []
+        req_path = request.args.get('path', '/')
+        current_path = metadata._sanitize_path(req_path)
+
+        files_raw = metadata.get_files_in_path(current_path)
+        dirs_raw = metadata.list_subdirectories(current_path)
+
+        files = []
+        folder_names_in_files = set()
+        for f in files_raw:
+            fid, name, owner, group, size, perms = f
+            is_folder = (float(size.split()[0]) == 0.0)
+            files.append({
+                'id': fid,
+                'name': name,
+                'owner': owner,
+                'group': group,
+                'size': size,
+                'permissions': perms,
+                'is_folder': is_folder
+            })
+            if is_folder:
+                folder_names_in_files.add(name)
+
+        for dirname, fullpath in dirs_raw:
+            if dirname not in folder_names_in_files:
+                folder_size = calculate_folder_size(current_user, fullpath)
+                files.append({
+                    'id': None,
+                    'name': dirname,
+                    'owner': current_user.username,
+                    'group': current_user.username,
+                    'size': convert_from_bytes(folder_size),
+                    'permissions': 'drwx------',
+                    'is_folder': True
+                })
+
+        for f in files:
+            if f['is_folder']:
+                f['size'] = convert_from_bytes(calculate_folder_size(current_user, current_path.rstrip('/') + '/' + f['name']))
+
+        files.sort(key=lambda x: (not x['is_folder'], x['name'].lower()))
+
+        return {'files': files, 'path': current_path}
 
 
 @datastore.route('/diff/<archive>', methods=['GET'])
@@ -187,26 +248,33 @@ def add_file():
         return jsonify({'error': 'No file part'}), 400
 
     file = request.files['file']
-
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
     permissions = request.form.get('permissions', 740)
     file_group = request.form.get('file-group', None)
 
+    upload_path = request.form.get('path', '/')
     filename = secure_filename(file.filename)
-    filepath = os.path.join(get_user_tree_path(current_user), filename)
 
+    metadata = UserMetadata(current_user.store_path)
+    upload_path = metadata._sanitize_path(upload_path)
+
+    base_path = get_user_tree_path(current_user)
+    abs_dir = os.path.join(base_path, upload_path.strip('/'))
+    if not os.path.exists(abs_dir):
+        os.makedirs(abs_dir)
+
+    filepath = os.path.join(abs_dir, filename)
     file.save(filepath)
 
     # Add to metadata database
     file_size = os.path.getsize(filepath)
-    metadata = UserMetadata(current_user.store_path)
-    metadata.add_file(filename, current_user.username, file_group, file_size, permissions)
+    metadata.add_file(filename, current_user.username, file_group, file_size, permissions, path=upload_path)
 
     create_archive(current_user)
 
-    store_logger.info(f'User {current_user.username} added file: {filename}')
+    store_logger.info(f'User {current_user.username} uploaded file: {filename} to {upload_path}')
 
     return jsonify({
         'message': 'File uploaded successfully',
@@ -221,43 +289,101 @@ def add_file():
 @datastore.route('/delete/<filename>', methods=['DELETE'])
 @login_required
 def delete_file(filename, archive=True):
-    tree_path = get_user_tree_path(current_user)
-    filename = secure_filename(filename)
-    filepath = os.path.join(tree_path, filename)
+    """Delete a single file or folder in the current directory (JSON must include `path`)."""
+    data = request.get_json(silent=True) or {}
+    raw_path = data.get('path', '/')
 
-    if not os.path.exists(filepath):
-        return jsonify({'error': 'File not found'}), 404
-
-    # Remove from filesystem
-    os.remove(filepath)
-
-    # Remove from metadata
     metadata = UserMetadata(current_user.store_path)
-    metadata.remove_file(filename)
+    current_path = metadata._sanitize_path(raw_path)
 
-    # Update user file count
+    base_tree = get_user_tree_path(current_user)
+    safe_name = secure_filename(filename)
+    abs_target = os.path.join(base_tree, current_path.strip('/'), safe_name)
+
+    if not os.path.exists(abs_target):
+        return jsonify({'error': 'File or folder not found'}), 404
+
+    conn = sqlite3.connect(metadata.db_path)
+
+    if os.path.isdir(abs_target):
+        shutil.rmtree(abs_target)
+        folder_full_path = '/' + safe_name if current_path == '/' else current_path.rstrip('/') + '/' + safe_name
+        conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
+        conn.execute('DELETE FROM files WHERE path = ? OR path LIKE ?', (folder_full_path, folder_full_path.rstrip('/') + '/%'))
+    else:
+        os.remove(abs_target)
+        conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
+
+    conn.commit()
+    conn.close()
+
     current_user.num_files = max(0, current_user.num_files - 1)
     db.session.commit()
 
     if archive:
         create_archive(current_user)
 
-    store_logger.info(f'User {current_user.username} deleted file: {filepath}')
-
-    return jsonify({'message': 'File deleted successfully'}), 200
+    store_logger.info(f'User {current_user.username} deleted: {abs_target}')
+    return jsonify({'message': 'Deleted successfully'}), 200
 
 
 @datastore.route('/delete-multiple', methods=['DELETE'])
 @login_required
 def delete_multiple():
-    files = request.get_json().get('files', [])
+    data = request.get_json() or {}
+    names = data.get('files', [])
+    raw_path = data.get('path', '/')
 
-    for file in files:
-        delete_file(file, archive=False)
+    metadata = UserMetadata(current_user.store_path)
+    current_path = metadata._sanitize_path(raw_path)
 
-    create_archive(current_user)
+    base_tree = get_user_tree_path(current_user)
+    deleted_count = 0
 
-    return jsonify({'message': 'Files deleted successfully'}), 200
+    # metadata db connection for batch ops
+    conn = sqlite3.connect(metadata.db_path)
+
+    for name in names:
+        safe_name = secure_filename(name)
+        abs_target = os.path.join(base_tree, current_path.strip('/'), safe_name)
+
+        if os.path.isdir(abs_target):
+            # Delete directory from disk
+            shutil.rmtree(abs_target)
+
+            # Full folder path in metadata terms
+            if current_path == '/':
+                folder_full_path = '/' + safe_name
+            else:
+                folder_full_path = current_path.rstrip('/') + '/' + safe_name
+
+            # Remove folder entry and all contents under it from metadata
+            conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
+            conn.execute('DELETE FROM files WHERE path = ? OR path LIKE ?', (folder_full_path, folder_full_path.rstrip('/') + '/%'))
+            deleted_count += 1
+
+        elif os.path.isfile(abs_target):
+            # Delete file from disk
+            os.remove(abs_target)
+
+            # Remove file entry for this exact path
+            conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
+            deleted_count += 1
+        else:
+            # Not found under this path – skip
+            continue
+
+    conn.commit()
+    conn.close()
+
+    # Update user stats and archive once after the batch
+    if deleted_count > 0:
+        current_user.num_files = max(0, current_user.num_files - deleted_count)
+        db.session.commit()
+        create_archive(current_user)
+
+    store_logger.info(f'User {current_user.username} deleted {deleted_count} item(s) from {current_path}')
+    return jsonify({'message': f'Deleted {deleted_count} item(s)'}), 200
 
 
 @datastore.route('/download/<file_id>')
@@ -313,9 +439,74 @@ def rename_file(file_id):
     return jsonify({'success': 'File renamed successfully'}), 200
 
 
+@datastore.route('/create-folder', methods=['POST'])
+@login_required
+def create_folder():
+    data = request.get_json()
+    folder_name = data.get('folder_name', '').strip()
+    parent_path = data.get('path', '/')
+
+    if not folder_name:
+        return jsonify({'error': 'Folder name required'}), 400
+
+    folder_name = secure_filename(folder_name)
+
+    metadata = UserMetadata(current_user.store_path)
+    parent_path = metadata._sanitize_path(parent_path)
+
+    abs_dir = os.path.join(get_user_tree_path(current_user), parent_path.strip('/'), folder_name)
+    if os.path.exists(abs_dir):
+        return jsonify({'error': 'Folder already exists'}), 400
+
+    os.makedirs(abs_dir)
+
+    metadata.add_file(
+        filename=folder_name,
+        owner=current_user.username,
+        file_group=current_user.username,
+        size=0,
+        permissions=740,
+        path=parent_path
+    )
+
+    store_logger.info(f'User {current_user.username} created folder: {abs_dir}')
+    return jsonify({'message': 'Folder created successfully'})
+
+
+@datastore.route('/recalc-sizes')
+@login_required
+def recalc_sizes():
+    """Recalculate file sizes for all files in metadata"""
+    base_path = get_user_tree_path(current_user)
+    metadata = UserMetadata(current_user.store_path)
+    conn = sqlite3.connect(metadata.db_path)
+    cursor = conn.execute('SELECT id, filename, path FROM files')
+    updated = 0
+
+    for fid, fname, fpath in cursor.fetchall():
+        abs_path = os.path.join(base_path, fpath.strip('/'), fname)
+        if os.path.isfile(abs_path):
+            size = os.path.getsize(abs_path)
+            conn.execute('UPDATE files SET size = ? WHERE id = ?', (size, fid))
+            updated += 1
+
+    conn.commit()
+    conn.close()
+    return jsonify({'message': f'Updated {updated} file sizes.'})
+
+
 @datastore.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
-    file_list = retrieve_user_store()
+    data = retrieve_user_store()
+    file_list = data.get('files', [])
+    dir_list = data.get('dirs', [])
+    current_path = data.get('path', '/')
     archive_list = list_archives()
-    return render_template('file-viewer.html', file_list=file_list, archive_list=archive_list)
+    return render_template(
+        'file-viewer.html',
+        file_list=file_list,
+        dir_list=dir_list,
+        current_path=current_path,
+        archive_list=archive_list
+    )

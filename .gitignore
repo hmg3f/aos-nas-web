@@ -3,3 +3,4 @@ __pycache__/
 /app/store/
 app/store/nasinfo.db
 /app/log/
+/.direnv/

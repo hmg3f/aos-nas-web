@@ -65,6 +65,50 @@ class UserMetadata:
         conn.commit()
         conn.close()
 
+    def _sanitize_path(self, path):
+        if not path:
+            return '/'
+        norm = os.path.normpath('/' + str(path).lstrip('/'))
+        return '/' if norm == '.' else norm
+
+    def get_files_in_path(self, path):
+        path = self._sanitize_path(path)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.execute(
+            'SELECT id, filename, owner, file_group, size, permissions '
+            'FROM files WHERE path = ? ORDER BY upload_date DESC',
+            (path,)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+        return [
+            (fid, fname, owner, fgrp, convert_from_bytes(size), octal_to_string(perms))
+            for fid, fname, owner, fgrp, size, perms in rows
+        ]
+
+    def list_subdirectories(self, path):
+        path = self._sanitize_path(path).rstrip('/')
+        like = f"{path}/%" if path else "/%"
+        conn = sqlite3.connect(self.db_path)
+        rows = conn.execute('SELECT DISTINCT path FROM files WHERE path LIKE ?', (like,)).fetchall()
+        conn.close()
+
+        children = set()
+        for (p,) in rows:
+            if not p.startswith('/'):
+                p = '/' + p.lstrip('/')
+            if p == path or p == (path or '/'):
+                continue
+            rel = p[len(path):].lstrip('/') if path else p.lstrip('/')
+            if not rel:
+                continue
+            first = rel.split('/', 1)[0]
+            full = (path + '/' + first) if path else '/' + first
+            children.add(full)
+
+        return sorted([(os.path.basename(d), d) for d in children], key=lambda x: x[0].lower())
+
+
     def get_file_path_by_id(self, file_id):
         """Retrieve file path and name based on file ID"""
         conn = sqlite3.connect(self.db_path)
