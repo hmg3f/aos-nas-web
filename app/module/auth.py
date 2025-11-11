@@ -43,6 +43,7 @@ class User(db.Model, UserMixin):
 
     # Flags
     ADMIN = 1
+    HIDDEN = 2
 
     def set_flag(self, flag):
         if not self.flags:
@@ -194,6 +195,17 @@ def create_admin_user():
         db.session.commit()
 
         auth_logger.info(f'Admin user created: {admin_user.username}')
+
+
+@auth.route('/list-users')
+@login_required
+def list_users():
+    users_list = User.query.filter(
+        (User.flags & User.HIDDEN) == 0
+    ).filter(
+        User.id != current_user.id
+    ).all()
+    return users_list
 
 
 # TODO: allow admin to create new admin accounts
