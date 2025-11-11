@@ -135,13 +135,15 @@ def calculate_folder_size(user, folder_path):
 @login_required
 def retrieve_user_store():
     if current_user.is_authenticated:
+        get_user_tree_path(current_user)
+        get_metadb_path(current_user)
+
         metadata = UserMetadata(current_user.store_path)
         req_path = request.args.get('path', '/')
         current_path = metadata._sanitize_path(req_path)
 
         files_raw = metadata.get_files_in_path(current_path)
         dirs_raw = metadata.list_subdirectories(current_path)
-
 
         files = []
         folder_names_in_files = set()
@@ -160,7 +162,6 @@ def retrieve_user_store():
             if is_folder:
                 folder_names_in_files.add(name)
 
-
         for dirname, fullpath in dirs_raw:
             if dirname not in folder_names_in_files:
                 folder_size = calculate_folder_size(current_user, fullpath)
@@ -174,11 +175,9 @@ def retrieve_user_store():
                     'is_folder': True
                 })
 
-
         for f in files:
             if f['is_folder']:
                 f['size'] = convert_from_bytes(calculate_folder_size(current_user, current_path.rstrip('/') + '/' + f['name']))
-
 
         files.sort(key=lambda x: (not x['is_folder'], x['name'].lower()))
 
@@ -387,7 +386,6 @@ def delete_multiple():
     return jsonify({'message': f'Deleted {deleted_count} item(s)'}), 200
 
 
-
 @datastore.route('/download/<file_id>')
 @login_required
 def download_file(file_id):
@@ -453,7 +451,6 @@ def create_folder():
 
     folder_name = secure_filename(folder_name)
 
-
     metadata = UserMetadata(current_user.store_path)
     parent_path = metadata._sanitize_path(parent_path)
 
@@ -462,7 +459,6 @@ def create_folder():
         return jsonify({'error': 'Folder already exists'}), 400
 
     os.makedirs(abs_dir)
-
 
     metadata.add_file(
         filename=folder_name,
