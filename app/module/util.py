@@ -96,3 +96,42 @@ def octal_to_string(octal):
         result += permission[i]
 
     return result
+
+
+def octal_to_dict(octal):
+    user_perms = octal // 100
+    group_perms = (octal // 10) % 10
+    all_perms = octal % 10
+
+    return {
+        'user': {
+            'read': user_perms & 4 != 0,
+            'write': user_perms & 2 != 0,
+            'execute': user_perms & 1 != 0
+        },
+        'group': {
+            'read': group_perms & 4 != 0,
+            'write': group_perms & 2 != 0,
+            'execute': group_perms & 1 != 0
+        },
+        'all': {
+            'read': all_perms & 4 != 0,
+            'write': all_perms & 2 != 0,
+            'execute': all_perms & 1 != 0
+        }
+    }
+
+
+def evaluate_permission(user_groups, file_group, file_perms):
+    user_groups = user_groups.split(',')
+
+    perms_dict = octal_to_dict(file_perms)
+
+    if perms_dict['all']['read']:
+        return True
+
+    if file_group in user_groups:
+        if perms_dict['group']['read']:
+            return True
+
+    return False
