@@ -1,6 +1,7 @@
 document.getElementById('create-folder-button').addEventListener('click', function() {
     const folderName = document.getElementById('new-folder-name').value.trim();
     const status = document.getElementById('folder-status');
+    const currentPath = document.getElementById('page-data').getAttribute('data-current-path');
 
     if (!folderName) {
 	status.textContent = 'Please enter a folder name.';
@@ -13,7 +14,7 @@ document.getElementById('create-folder-button').addEventListener('click', functi
 	headers: { 'Content-Type': 'application/json' },
 	body: JSON.stringify({
 	    folder_name: folderName,
-	    path: "{{ current_path }}"
+	    path: currentPath
 	}),
     })
 	.then(r => r.json())

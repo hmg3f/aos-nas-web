@@ -186,7 +186,6 @@ def create_admin_user():
                           password=password_hash,
                           quota=None,
                           store_path=store_path,
-                          # flags=User.ADMIN | User.HIDDEN,
                           user_groups='admin')
 
         admin_user.set_flag(User.ADMIN)
