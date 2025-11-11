@@ -262,3 +262,18 @@ body {
     height: 300px;
     width: 400px;
 }
+
+.subpanel strong { margin-right: 6px; }
+.subpanel a { color: #cfd8ff; text-decoration: none; }
+.subpanel a:hover { text-decoration: underline; }
+
+.status-success {
+    color: #7cff7c;
+    margin-top: 5px;
+}
+
+.status-error {
+    color: #ff7c7c;
+    margin-top: 5px;
+}
+

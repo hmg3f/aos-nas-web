@@ -14,6 +14,19 @@
 {% block content %}
 <section id="file-view" class="panel">
   <h1>Files</h1>
+<!-- carries current path for JS -->
+  <div id="page-data" data-current-path="{{ current_path }}"></div>
+
+  <div class="subpanel" style="padding-top:0">
+    <strong>Path:</strong>
+    <a href="{{ url_for('file_viewer') }}">/</a>
+    {% set segs = current_path.strip('/').split('/') if current_path.strip('/') else [] %}
+    {% set acc = '' %}
+    {% for s in segs %}
+      {% set acc = acc + '/' + s %}
+      / <a href="{{ url_for('file_viewer', path=acc) }}">{{ s }}</a>
+    {% endfor %}
+  </div>
 
   <table>
     <thead>
@@ -30,26 +43,54 @@
       </tr>
     </thead>
     <tbody>
-      {% for id, name, owner, group, size, permissions in file_list %}
-      <tr>
-	<td>
-	  <input type="checkbox" class="file-checkbox" data-filename="{{ name }}">
-	</td>
-	<td>
-	  <a href="{{ url_for('/store.download_file', file_id=id) }}" class="overflow-hidden file-listing" data-id="{{ id }}">
-	    {{ name }}
-	  </a>
-	</td>
-	<td>{{ owner }}</td>
-	<td>{{ group }}</td>
-	<td>{{ size }}</td>
-	<td>{{ permissions }}</td>
-      </tr>
+
+
+      {% if current_path != '/' %}
+        {% set parent = '/' if not current_path.strip('/').count('/') else '/' + '/'.join(current_path.strip('/').split('/')[:-1]) %}
+        <tr>
+          <td></td>
+          <td><a href="{{ url_for('file_viewer', path=parent) }}" class="overflow-hidden">..</a></td>
+          <td colspan="4"></td>
+        </tr>
+      {% endif %}
+
+
+      {% for dirname, fullpath in dir_list %}
+        <tr>
+          <td></td>
+          <td><a href="{{ url_for('file_viewer', path=fullpath) }}" class="overflow-hidden">📁 {{ dirname }}/</a></td>
+          <td colspan="4"></td>
+        </tr>
       {% endfor %}
+
+      <!-- Files (only for current directory) -->
+{% for item in file_list %}
+  <tr>
+    <td>
+      <input type="checkbox" class="file-checkbox" data-filename="{{ item.name }}">
+    </td>
+    <td>
+      {% if item.is_folder %}
+        <a href="{{ url_for('file_viewer', path=(current_path.rstrip('/') ~ '/' ~ item.name).replace('//','/')) }}" class="overflow-hidden">📁 {{ item.name }}/</a>
+      {% else %}
+        <a href="{{ url_for('store.download_file', file_id=item.id) }}" class="overflow-hidden file-listing" data-id="{{ item.id }}">
+          {{ item.name }}
+        </a>
+      {% endif %}
+    </td>
+    <td>{{ item.owner }}</td>
+    <td>{{ item.group }}</td>
+    <td>{{ item.size }}</td>
+    <td>{{ item.permissions }}</td>
+  </tr>
+{% endfor %}
+
+
+
     </tbody>
   </table>
-  
-  <div id="file-context-menu" style="display:none; position:absolute; z-index:1000";>
+
+  <div id="file-context-menu" style="display:none; position:absolute; z-index:1000;">
     <ul>
       <li><a href="#" id="download-option">Download</a></li>
       <li><a href="#" id="rename-option">Rename</a></li>
@@ -66,9 +107,22 @@
     <button id="delete-button" disabled>Delete Selected</button>
   </div>
 
+
+  <section id="new-folder" class="subpanel">
+    <h2>New Folder</h2>
+    <div class="form-group">
+      <input type="text" id="new-folder-name" placeholder="Folder name" required>
+      <button id="create-folder-button">Create Folder</button>
+    </div>
+    <div id="folder-status"></div>
+  </section>
+
+
   <section id="file-upload" class="subpanel">
     <h2>Upload File</h2>
-    <form method="POST" id="upload-form" action="{{ url_for('/store.add_file') }}" enctype="multipart/form-data">
+    <form method="POST" id="upload-form" action="{{ url_for('store.add_file') }}" enctype="multipart/form-data">
+    <input type="hidden" name="path" id="upload-path" value="{{ current_path }}">
+
       <div class="form-group">
         <label for="file-input">Choose file:</label>
         <input type="file" name="file" required>
@@ -139,6 +193,44 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+document.getElementById('create-folder-button').addEventListener('click', function() {
+  const folderName = document.getElementById('new-folder-name').value.trim();
+  const status = document.getElementById('folder-status');
+
+  if (!folderName) {
+    status.textContent = 'Please enter a folder name.';
+    status.className = 'status-error';
+    return;
+  }
+
+  fetch('/store/create-folder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      folder_name: folderName,
+      path: "{{ current_path }}"
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      status.textContent = 'Error: ' + data.error;
+      status.className = 'status-error';
+    } else {
+      status.textContent = 'Success! Folder created.';
+      status.className = 'status-success';
+      document.getElementById('new-folder-name').value = '';
+      setTimeout(() => { window.location.reload(); }, 1000);
+    }
+  })
+  .catch(err => {
+    status.textContent = 'Error creating folder: ' + err;
+    status.className = 'status-error';
+  });
+});
+</script>
+
 <script src="{{ url_for('static', filename='js/upload-handler.js') }}"></script>
 <script src="{{ url_for('static', filename='js/file-delete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/archive-select.js') }}"></script>

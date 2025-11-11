@@ -39,31 +39,32 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	// send DELETE request to the server
+	const pageDataEl = document.getElementById('page-data');
+	const currentPath = pageDataEl ? pageDataEl.dataset.currentPath || '/' : '/';
+
 	fetch('/store/delete-multiple', {
-            method: 'DELETE',
-            headers: {
-		'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ files: selectedFiles }),
-            credentials: 'same-origin'
+	  method: 'DELETE',
+	  headers: {
+	    'Content-Type': 'application/json',
+	  },
+	  body: JSON.stringify({ files: selectedFiles, path: currentPath }),
+	  credentials: 'same-origin'
 	})
-	    .then(response => {
-		if (response.ok) {
-		    alert('Selected files deleted successfully');
-		    toggleDeleteButton();
-		    
-		    // reload window
-		    setTimeout(() => {
-			window.location.reload();
-		    }, 2000);
-		} else {
-		    alert('Error deleting files');
-		}
-	    })
-	    .catch(error => {
-		console.error('Error:', error);
-		alert('Error deleting files');
-	    });
+	  .then(response => {
+	    if (response.ok) {
+	      alert('Selected items deleted successfully');
+	      toggleDeleteButton();
+	      setTimeout(() => {
+		window.location.reload();
+	      }, 1000);
+	    } else {
+	      response.json().then(d => alert(d.error || 'Error deleting items'));
+	    }
+	  })
+	  .catch(error => {
+	    console.error('Error:', error);
+	    alert('Error deleting items');
+	  });
     });
 
     // enable/disable delete button based on checkbox selection
