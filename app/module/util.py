@@ -9,6 +9,10 @@ import logging
 db = SQLAlchemy()
 app = Flask("__main__")
 
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(MODULE_DIR)
+DATABASE_PATH = os.path.join(BASE_DIR, 'store')
+
 logdir = os.path.join(os.getcwd(), 'log')
 if not os.path.exists(logdir):
     os.makedirs(logdir)

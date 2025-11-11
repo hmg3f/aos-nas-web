@@ -17,7 +17,7 @@
 <section id="account-manager" class="panel">
   <h1>Account Management</h1>
 
-  <form method="POST" action="{{ url_for('account_manager') }}">
+  <form method="POST" action="{{ url_for('/auth.account_manager') }}">
     {{ form.hidden_tag() }}
     
     <div class="form-group">
@@ -46,9 +46,9 @@
   </form>
   
   <div class="controls">
-    <a href="{{url_for('file_viewer')}}">◀ Return</a>
-    <a href="{{url_for('logout')}}">Log Out</a>
-    <a href="{{url_for('create_user')}}">Create User</a>
+    <a href="{{url_for('/store.file_viewer')}}">◀ Return</a>
+    <a href="{{url_for('/auth.logout')}}">Log Out</a>
+    <a href="{{url_for('/auth.create_user')}}">Create User</a>
   </div>
 </section>
 {% endblock %}

@@ -5,7 +5,7 @@ import time
 import datetime
 import shutil
 
-from flask import Blueprint, request, jsonify, send_from_directory
+from flask import Blueprint, request, jsonify, send_from_directory, render_template
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -293,7 +293,7 @@ def rename_file(file_id):
         current_path = get_user_tree_path(current_user)
     else:
         current_path = os.path.join(get_user_tree_path(current_user), file_path)
-        
+
     current_file = os.path.join(current_path, file_name)
 
     new_name = request.json.get('new_name').strip()
@@ -322,8 +322,14 @@ def admin_create_user():
 
         return jsonify({'error': 'Insufficient permissions'}), 403
 
-   
-
     data = request.get_json()
 
     return jsonify({'success': True})
+
+
+@datastore.route('/files', methods=['GET', 'POST'])
+@login_required
+def file_viewer():
+    file_list = retrieve_user_store()
+    archive_list = list_archives()
+    return render_template('file-viewer.html', file_list=file_list, archive_list=archive_list)
