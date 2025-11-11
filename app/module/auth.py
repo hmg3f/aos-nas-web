@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, url_for, redirect, flash, jsonify
+from flask import Blueprint, render_template, url_for, redirect, flash, jsonify, request
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
@@ -10,7 +10,6 @@ from module.util import DATABASE_PATH, app, db, auth_logger
 import hashlib
 import time
 import os
-import request
 
 auth = Blueprint('/auth', __name__)
 
@@ -187,10 +186,11 @@ def create_admin_user():
                           password=password_hash,
                           quota=None,
                           store_path=store_path,
-                          flags=User.ADMIN,
+                          # flags=User.ADMIN | User.HIDDEN,
                           user_groups='admin')
 
-        # admin_user.set_flag(User.ADMIN)
+        admin_user.set_flag(User.ADMIN)
+        admin_user.set_flag(User.HIDDEN)
         db.session.add(admin_user)
         db.session.commit()
 
@@ -201,11 +201,20 @@ def create_admin_user():
 @login_required
 def list_users():
     users_list = User.query.filter(
-        (User.flags & User.HIDDEN) == 0
+        ~User.flags.op('&')(User.HIDDEN)
     ).filter(
         User.id != current_user.id
     ).all()
-    return users_list
+
+    users_data = []
+    for user in users_list:
+        print(f'HIDDEN_FLAG: {user.has_flag(User.HIDDEN)}\nADMIN_FLAG: {user.has_flag(User.ADMIN)}\nFLAGS: {user.flags}')
+        users_data.append({
+            'id': user.id,
+            'username': user.username,
+        })
+
+    return jsonify({'users': users_data})
 
 
 # TODO: allow admin to create new admin accounts
