@@ -17,6 +17,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -38,7 +39,7 @@ class User(db.Model, UserMixin):
     enabled = db.Column(db.Boolean, nullable=False, default=True)
     flags = db.Column(db.Integer, nullable=False, default=0)
     user_groups = db.Column(db.String, nullable=False)
-    
+
     # Flags
     ADMIN = 1
 
@@ -56,7 +57,7 @@ class User(db.Model, UserMixin):
         if not self.flags:
             self.flags = 0
         return (self.flags & flag) > 0
-    
+
 
 class RegisterForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
@@ -67,7 +68,7 @@ class RegisterForm(FlaskForm):
                              render_kw={'placeholder': 'Password'})
     quota = SelectField('Quota', choices=gen_quota_selections(['100M', '512M', '1G', '5G']))
     submit = SubmitField('Create Account')
-    
+
 
 class LoginForm(FlaskForm):
     username = StringField(validators=[InputRequired(),
@@ -86,6 +87,7 @@ class AccountManagementForm(FlaskForm):
     confirm_password = PasswordField('Confirm New Password', validators=[EqualTo('new_password', message='Passwords must match')])
     submit = SubmitField('Update Account')
 
+
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -95,11 +97,11 @@ def login():
             if check_password_hash(user.password, form.password.data):
                 login_user(user)
                 auth_logger.info(f'User logged in: {user.username}')
-                
+
                 return redirect(url_for('/store.file_viewer'))
             else:
                 auth_logger.warn(f'Login failed for: {user.username}')
-                
+
     return render_template('login.html', form=form)
 
 
@@ -121,7 +123,7 @@ def account_manager():
         print(f"FORM USERNAME DATA: {form.username.data}")
         if form.username.data != current_user.username:
             current_user.username = form.username.data
-        
+
         # Handle Password change
         if form.new_password.data:
             if check_password_hash(current_user.password, form.current_password.data):
@@ -129,7 +131,7 @@ def account_manager():
             else:
                 flash('Current password is incorrect.', 'error')
                 return redirect(url_for('/auth.account_manager'))
-        
+
         db.session.commit()
         flash('Your account has been updated.', 'success')
         return redirect(url_for('/auth.account_manager'))
@@ -143,14 +145,14 @@ def create_user():
 
     if form.validate_on_submit():
         password_hash = generate_password_hash(form.password.data)
-        
+
         m = hashlib.sha256()
         m.update(str(round(time.time())).encode('utf-8'))
         m.update(form.username.data.encode('utf-8'))
-        
+
         user_dir = m.hexdigest()[:5]
         store_path = os.path.join(DATABASE_PATH, user_dir)
-        
+
         user = User(username=form.username.data,
                     password=password_hash,
                     quota=form.quota.data,
@@ -162,7 +164,7 @@ def create_user():
         auth_logger.info(f'User created: {user.username}')
 
         return redirect(url_for('/auth.login'))
-    
+
     return render_template('create.html', form=form)
 
 
@@ -171,11 +173,11 @@ def create_admin_user():
     if not admin_user:
         admin_password = os.getenv('ADMIN_PASSWORD', 'admin')
         password_hash = generate_password_hash(admin_password)
-        
+
         m = hashlib.sha256()
         m.update(str(round(time.time())).encode('utf-8'))
         m.update('admin'.encode('utf-8'))
-        
+
         user_dir = m.hexdigest()[:5]
         store_path = os.path.join(DATABASE_PATH, user_dir)
 
@@ -185,9 +187,9 @@ def create_admin_user():
                           store_path=store_path,
                           flags=User.ADMIN,
                           user_groups='admin')
-        
+
         # admin_user.set_flag(User.ADMIN)
         db.session.add(admin_user)
         db.session.commit()
-        
+
         auth_logger.info(f'Admin user created: {admin_user.username}')

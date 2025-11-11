@@ -1,14 +1,14 @@
 import sqlite3
 import os
-from datetime import datetime
 
 from module.util import convert_from_bytes, octal_to_string
+
 
 class UserMetadata:
     def __init__(self, user_store_path):
         self.db_path = os.path.join(user_store_path, 'stage', '_meta.db')
         self._init_db()
-        
+
     def _init_db(self):
         conn = sqlite3.connect(self.db_path)
         conn.execute('''
@@ -27,11 +27,11 @@ class UserMetadata:
         ''')
         conn.commit()
         conn.close()
-        
+
     def add_file(self, filename, owner, file_group, size, permissions=740, path='/', file_hash=None):
         if not file_group:
             file_group = owner
-        
+
         conn = sqlite3.connect(self.db_path)
         conn.execute('''
             INSERT OR REPLACE INTO files (filename, path, owner, file_group, size, permissions, file_hash)
@@ -50,9 +50,9 @@ class UserMetadata:
             (id, filename, owner, file_group, convert_from_bytes(size), octal_to_string(permissions))
             for id, filename, owner, file_group, size, permissions in files
         ]
-        
+
         return files
-    
+
     def remove_file(self, filename):
         conn = sqlite3.connect(self.db_path)
         conn.execute('DELETE FROM files WHERE filename = ?', (filename,))

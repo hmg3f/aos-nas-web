@@ -19,14 +19,15 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 db.init_app(app)
 
+
 @app.route('/')
 def home():
     return render_template('home.html', files_num=42)
 
-        
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_admin_user()
-        
+
     app.run(debug=True)
