@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, url_for, redirect, flash
+from flask import Blueprint, render_template, url_for, redirect, flash, jsonify
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
@@ -10,6 +10,7 @@ from module.util import DATABASE_PATH, app, db, auth_logger
 import hashlib
 import time
 import os
+import request
 
 auth = Blueprint('/auth', __name__)
 
@@ -193,3 +194,16 @@ def create_admin_user():
         db.session.commit()
 
         auth_logger.info(f'Admin user created: {admin_user.username}')
+
+
+# TODO: allow admin to create new admin accounts
+@auth.route('/admin/create-user', methods=['POST'])
+@login_required
+def admin_create_user():
+    if current_user.username not in ['admin', 'root']:
+
+        return jsonify({'error': 'Insufficient permissions'}), 403
+
+    data = request.get_json()
+
+    return jsonify({'success': True})

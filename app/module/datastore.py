@@ -313,21 +313,6 @@ def rename_file(file_id):
     return jsonify({'success': 'File renamed successfully'}), 200
 
 
-@datastore.route('/admin/create-user', methods=['POST'])
-@login_required
-def admin_create_user():
-
-    user_manager = UserManager(get_metadb_path(current_user))
-
-    if user_manager.get_user_role(current_user.username) not in ['admin', 'root']:
-
-        return jsonify({'error': 'Insufficient permissions'}), 403
-
-    data = request.get_json()
-
-    return jsonify({'success': True})
-
-
 @datastore.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
