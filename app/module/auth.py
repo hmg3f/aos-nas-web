@@ -186,6 +186,17 @@ def create_user():
     return render_template('create.html', form=form)
 
 
+@auth.route('/delete')
+@login_required
+def delete_user():
+    current_user.enabled = False
+    db.session.commit()
+    logout_user()
+    flash('Your account has been deleted successfully.', 'success')
+
+    return redirect(url_for('home'))
+
+
 def create_admin_user():
     admin_user = User.query.filter_by(username='admin').first()
     if not admin_user:
