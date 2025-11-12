@@ -122,10 +122,16 @@ def octal_to_dict(octal):
     }
 
 
-def evaluate_permission(user_groups, file_group, file_perms):
-    user_groups = user_groups.split(',')
+def evaluate_read_permission(user, file):
+    user_groups = user.user_groups.split(',')
+    file_perms = file['permissions']
+    file_owner = file['owner']
+    file_group = file['group']
 
     perms_dict = octal_to_dict(int(file_perms))
+
+    if user.username == file_owner:
+        return True
 
     if perms_dict['all']['read']:
         return True
