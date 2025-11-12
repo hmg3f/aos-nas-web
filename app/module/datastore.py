@@ -6,17 +6,30 @@ import datetime
 import shutil
 import sqlite3
 
-from flask import Blueprint, request, jsonify, send_from_directory, render_template
+from flask import Blueprint, request, jsonify, send_from_directory, render_template, url_for, redirect
 from flask_login import login_required, current_user
+from flask_wtf import FlaskForm
+from wtforms import SelectField, SubmitField
 from werkzeug.utils import secure_filename
 
-from module.util import db, store_logger, convert_from_bytes
+from module.auth import list_users, get_user_by_id
+from module.util import db, store_logger, convert_from_bytes, evaluate_permission
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
 
 borg_api = borgapi.BorgAPI(defaults={}, options={})
 borg_api.set_environ(BORG_PASSPHRASE="pass")
+
+
+class SharedFilesForm(FlaskForm):
+    owner = SelectField('Owner:', coerce=int)
+    submit = SubmitField('View Files')
+
+    def __init__(self, owner_choices=None, *args, **kwargs):
+        super(SharedFilesForm, self).__init__(*args, **kwargs)
+        if owner_choices:
+            self.owner.choices = [(str(user_id), username) for user_id, username in owner_choices]
 
 
 def get_repo_path(user):
@@ -131,57 +144,56 @@ def calculate_folder_size(user, folder_path):
     return sum(sizes)
 
 
-@datastore.route('/retrieve')
+@datastore.route('/retrieve/<user>')
 @login_required
-def retrieve_user_store():
-    if current_user.is_authenticated:
-        get_user_tree_path(current_user)
-        get_metadb_path(current_user)
+def retrieve_user_store(user):
+    get_user_tree_path(user)
+    get_metadb_path(user)
 
-        metadata = UserMetadata(current_user.store_path)
-        req_path = request.args.get('path', '/')
-        current_path = metadata._sanitize_path(req_path)
+    metadata = UserMetadata(user.store_path)
+    req_path = request.args.get('path', '/')
+    current_path = metadata._sanitize_path(req_path)
 
-        files_raw = metadata.get_files_in_path(current_path)
-        dirs_raw = metadata.list_subdirectories(current_path)
+    files_raw = metadata.get_files_in_path(current_path)
+    dirs_raw = metadata.list_subdirectories(current_path)
 
-        files = []
-        folder_names_in_files = set()
-        for f in files_raw:
-            fid, name, owner, group, size, perms = f
-            is_folder = (float(size.split()[0]) == 0.0)
+    files = []
+    folder_names_in_files = set()
+    for f in files_raw:
+        fid, name, owner, group, size, perms = f
+        is_folder = (float(size.split()[0]) == 0.0)
+        files.append({
+            'id': fid,
+            'name': name,
+            'owner': owner,
+            'group': group,
+            'size': size,
+            'permissions': perms,
+            'is_folder': is_folder
+        })
+        if is_folder:
+            folder_names_in_files.add(name)
+
+    for dirname, fullpath in dirs_raw:
+        if dirname not in folder_names_in_files:
+            folder_size = calculate_folder_size(user, fullpath)
             files.append({
-                'id': fid,
-                'name': name,
-                'owner': owner,
-                'group': group,
-                'size': size,
-                'permissions': perms,
-                'is_folder': is_folder
+                'id': None,
+                'name': dirname,
+                'owner': user.username,
+                'group': user.username,
+                'size': convert_from_bytes(folder_size),
+                'permissions': 'drwx------',
+                'is_folder': True
             })
-            if is_folder:
-                folder_names_in_files.add(name)
 
-        for dirname, fullpath in dirs_raw:
-            if dirname not in folder_names_in_files:
-                folder_size = calculate_folder_size(current_user, fullpath)
-                files.append({
-                    'id': None,
-                    'name': dirname,
-                    'owner': current_user.username,
-                    'group': current_user.username,
-                    'size': convert_from_bytes(folder_size),
-                    'permissions': 'drwx------',
-                    'is_folder': True
-                })
+    for f in files:
+        if f['is_folder']:
+            f['size'] = convert_from_bytes(calculate_folder_size(user, current_path.rstrip('/') + '/' + f['name']))
 
-        for f in files:
-            if f['is_folder']:
-                f['size'] = convert_from_bytes(calculate_folder_size(current_user, current_path.rstrip('/') + '/' + f['name']))
+    files.sort(key=lambda x: (not x['is_folder'], x['name'].lower()))
 
-        files.sort(key=lambda x: (not x['is_folder'], x['name'].lower()))
-
-        return {'files': files, 'path': current_path}
+    return {'files': files, 'path': current_path}
 
 
 @datastore.route('/diff/<archive>', methods=['GET'])
@@ -190,9 +202,7 @@ def get_diff(archive):
     original_cwd = os.getcwd()
     os.chdir(current_user.store_path)
 
-    current_archive = current_user.archive_state
     mount_path = get_mount_path(current_user)
-    stage_path = get_user_tree_path(current_user)
     repo_path = get_repo_path(current_user)
 
     mount_archive = find_archive_by_id(archive)['archive']
@@ -495,18 +505,63 @@ def recalc_sizes():
     return jsonify({'message': f'Updated {updated} file sizes.'})
 
 
+@login_required
+def filter_permitted_files(files):
+    permitted_groups = current_user.user_groups
+    permitted_files = []
+
+    for file in files:
+        fid, name, owner, group, size, perms = file
+        if evaluate_permission(permitted_groups, group, perms):
+            permitted_files.append(file)
+
+    return permitted_files
+
+
+# @datastore.route('/shared-files/<target_id>')
+# @login_required
+# def get_shared_fs(target_id):
+#     target_user = get_user_by_id(target_id)
+#     target_meta = UserMetadata(target_user.store_path)
+#     target_files = target_meta.get_files()
+
+#     return filter_permitted_files(target_files)
+
+@datastore.route('/shared-files')
+@login_required
+def get_shared_fs():
+    user_id = request.args.get('user_id')
+    user = get_user_by_id(user_id)
+
+    data = retrieve_user_store(user)
+
+    return render_template('shared-files.html',
+                           file_list=data.get('files', []),
+                           dir_list=data.get('dirs', []),
+                           current_path=data.get('path', '/'),
+                           user_id=user_id)
+
+
 @datastore.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
-    data = retrieve_user_store()
+    data = retrieve_user_store(current_user)
     file_list = data.get('files', [])
     dir_list = data.get('dirs', [])
     current_path = data.get('path', '/')
     archive_list = list_archives()
+
+    users_list = [(user['id'], user['username']) for user in list_users()]
+    shareform = SharedFilesForm(owner_choices=users_list)
+
+    if shareform.validate_on_submit():
+        return redirect(url_for('/store.get_shared_fs', user_id=shareform.owner.data))
+
     return render_template(
         'file-viewer.html',
         file_list=file_list,
         dir_list=dir_list,
         current_path=current_path,
-        archive_list=archive_list
+        archive_list=archive_list,
+        shareform=shareform
     )

@@ -94,6 +94,10 @@ class AccountManagementForm(FlaskForm):
     submit = SubmitField('Update Account')
 
 
+def get_user_by_id(user_id):
+    return User.query.filter_by(id=user_id).first()
+
+
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -246,7 +250,7 @@ def list_users():
             'username': user.username,
         })
 
-    return jsonify({'users': users_data})
+    return users_data
 
 
 # TODO: allow admin to create new admin accounts

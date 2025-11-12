@@ -181,6 +181,22 @@
     
     <button id="revert-archive" disabled>Revert to Archive</button>
   </section>
+
+  <section id="shared-files" class="subpanel">
+    <h2>Access Shared Files</h2>
+
+    <form method="POST">
+      {{ shareform.hidden_tag() }}
+
+      <div>
+        <label for="owner">{{ shareform.owner.label }}</label>
+        {{ shareform.owner() }}
+      </div>
+      <div>
+        {{ shareform.submit() }}
+      </div>
+    </form>
+  </section>
 </section>
 {% endblock %}
 

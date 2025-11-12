@@ -125,7 +125,7 @@ def octal_to_dict(octal):
 def evaluate_permission(user_groups, file_group, file_perms):
     user_groups = user_groups.split(',')
 
-    perms_dict = octal_to_dict(file_perms)
+    perms_dict = octal_to_dict(int(file_perms))
 
     if perms_dict['all']['read']:
         return True

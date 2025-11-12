@@ -47,7 +47,7 @@ class UserMetadata:
         conn.close()
 
         files = [
-            (id, filename, owner, file_group, convert_from_bytes(size), octal_to_string(permissions))
+            (id, filename, owner, file_group, convert_from_bytes(size), permissions)
             for id, filename, owner, file_group, size, permissions in files
         ]
 
