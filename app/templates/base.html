@@ -22,15 +22,28 @@
       }
     </style>
 
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
-    
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">    
     {% block extra_css %}{% endblock %}
 
     {% block preload_scripts %}{% endblock %}
   </head>
   <body>
-    {% block content %}{% endblock %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <section id="flash-messages" class="popup">
+      <h1>Server Messages</h1>
+      <div class="content">
+	{% for category, message in messages %}
+	<div class="status status-{{ category }}">{{ message }}</div>
+	{% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% endwith %}
     
+    {% block content %}{% endblock %}
+
     {% block scripts %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/popup-handler.js') }}"></script>
   </body>
 </html>

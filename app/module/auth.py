@@ -15,12 +15,16 @@ auth = Blueprint('/auth', __name__)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = "login"
+login_manager.login_view = "/auth.login"
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    user = User.query.get(int(user_id))
+    if user.enabled:
+        return user
+    else:
+        return None
 
 
 def gen_quota_selections(quotas):
@@ -96,12 +100,17 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
             if check_password_hash(user.password, form.password.data):
-                login_user(user)
-                auth_logger.info(f'User logged in: {user.username}')
+                if user.enabled:
+                    login_user(user)
+                    auth_logger.info(f'User logged in: {user.username}')
 
-                return redirect(url_for('/store.file_viewer'))
+                    return redirect(url_for('/store.file_viewer'))
+                else:
+                    auth_logger.warn(f'Login attempted for disabled account: {user.username}')
+                    flash('Your account is disabled. Please contact support.', 'error')
             else:
                 auth_logger.warn(f'Login failed for: {user.username}')
+                flash('Invalid username or password.', 'error')
 
     return render_template('login.html', form=form)
 
@@ -145,6 +154,12 @@ def create_user():
     form = RegisterForm()
 
     if form.validate_on_submit():
+        # Check if the username already exists
+        existing_user = User.query.filter_by(username=form.username.data).first()
+        if existing_user:
+            flash('Username already taken. Please choose a different one.', 'error')
+            return redirect(url_for('/auth.create_user'))
+
         password_hash = generate_password_hash(form.password.data)
 
         m = hashlib.sha256()
@@ -162,9 +177,11 @@ def create_user():
         db.session.add(user)
         db.session.commit()
 
+        login_user(user)
+
         auth_logger.info(f'User created: {user.username}')
 
-        return redirect(url_for('/auth.login'))
+        return redirect(url_for('/store.file_viewer'))
 
     return render_template('create.html', form=form)
 
