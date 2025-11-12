@@ -1,6 +1,6 @@
 import os
 
-from flask import render_template
+from flask import render_template, jsonify
 
 from module.datastore import datastore
 from module.auth import auth, create_admin_user
@@ -28,6 +28,7 @@ def home():
 
 @app.route('/system_perf')
 def system_perf():
+    # this code will be changed later
     cpu_usage = psutil.cpu_percent()
     disk_usage = psutil.disk_usage('/')
     # in GB
@@ -38,6 +39,31 @@ def system_perf():
     sys_logs = ["log0", "log1", "log2"]
 
     return render_template('system_perf.html', cpu_usage=cpu_usage, total=total, used=used, free=free, disk_percent=disk_percent, sys_logs=sys_logs)
+
+
+@app.route('/system_stats')
+def generate_sys_stats():
+    cpu_usage = psutil.cpu_percent()
+    disk_usage = psutil.disk_usage('/')
+    total = f"{disk_usage.total / (1024**3):.2f}"
+    used = f"{disk_usage.used / (1024**3):.2f}"
+    free = f"{disk_usage.free / (1024**3):.2f}"
+    disk_percent = disk_usage.percent
+    sys_logs = ["log0", "log1", "log2"]
+
+    stats = {
+        "success": "System stats retrieved successfully.",
+        "data": {
+            "cpu": cpu_usage,
+            "disk": disk_usage,
+            "total": total,
+            "used": used,
+            "free": free,
+            "percent": disk_percent,
+            "logs": sys_logs
+        }
+    }
+    return jsonify(stats)
 
 
 if __name__ == '__main__':
