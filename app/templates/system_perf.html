@@ -11,21 +11,20 @@
 	<!-- System Performance Window Goes Here -->
 	<div class="performance_window">
 		<h2>CPU Utilization</h2>
-		<p>{{ cpu_usage }}%</p>
+		<div id="cpu_container"></div>
 		<h2>Disk Usage</h2>
-		<p>
-		Total: {{ total }} GB<br>
-		Used: {{ used }} GB<br>
-		Free: {{ free }} GB<br>
-		Percentage Used: {{ disk_percent }}%
-		</p>
+		<div id="disk_usage_container"></div>
 		<h2>System Logs</h2>
-		{% for log in sys_logs %}
-		<p>{{ log }}</p>
-		{% endfor %}	
+		<div id="log_container"></div>
 	</div>
 
 	<a href="{{url_for('home')}}" class="performance_links">Return to Home</a>
 </div>
+
+{% block scripts %}
+
+<script src="{{ url_for('static', filename='js/system_perf.js') }}"></script>
+
+{% endblock %}
 
 {% endblock %}
