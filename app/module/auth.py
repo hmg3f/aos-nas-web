@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, url_for, redirect, flash, jsonify, request
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, SubmitField
+from wtforms import StringField, PasswordField, SelectField, SubmitField, BooleanField
 from wtforms.validators import InputRequired, Length, EqualTo, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -72,6 +72,7 @@ class RegisterForm(FlaskForm):
                                          Length(min=4, max=40)],
                              render_kw={'placeholder': 'Password'})
     quota = SelectField('Quota', choices=gen_quota_selections(['100M', '512M', '1G', '5G']))
+    hidden = BooleanField('Hidden', default=False)
     submit = SubmitField('Create Account')
 
 
@@ -175,6 +176,10 @@ def create_user():
                     store_path=store_path,
                     user_groups=f'{form.username.data},users')
         db.session.add(user)
+
+        if form.hidden.data:
+            user.set_flag(User.HIDDEN)
+
         db.session.commit()
 
         login_user(user)

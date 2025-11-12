@@ -10,7 +10,17 @@
     {{ form.hidden_tag() }}
     {{ form.username }}
     {{ form.password }}
-    {{ form.quota }}
+
+    <div class="form-group">
+      <label for="quota">Quota</label>
+      {{ form.quota }}
+    </div>
+
+    <div class="form-group">
+      <label for="hidden">Hidden</label>
+      {{ form.hidden }}
+    </div>
+
     {{ form.submit }}
   </form>
 
