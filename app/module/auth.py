@@ -21,7 +21,7 @@ login_manager.login_view = "/auth.login"
 @login_manager.user_loader
 def load_user(user_id):
     user = User.query.get(int(user_id))
-    if user.enabled:
+    if user and user.enabled:
         return user
     else:
         return None

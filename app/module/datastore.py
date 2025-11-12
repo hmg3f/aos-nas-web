@@ -13,7 +13,7 @@ from wtforms import SelectField, SubmitField
 from werkzeug.utils import secure_filename
 
 from module.auth import list_users, get_user_by_id
-from module.util import db, store_logger, convert_from_bytes, evaluate_permission
+from module.util import db, store_logger, convert_from_bytes, evaluate_read_permission, octal_to_string
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
@@ -114,16 +114,44 @@ def borg_unmount(user):
         borg_api.umount(mount_path)
 
 
-@datastore.route('/archive-list')
+@datastore.route('/create-folder', methods=['POST'])
 @login_required
-def list_archives():
-    repo_path = get_repo_path(current_user)
-    return borg_api.list(repo_path, json=True)['archives']
+def create_folder():
+    data = request.get_json()
+    folder_name = data.get('folder_name', '').strip()
+    parent_path = data.get('path', '/')
+
+    if not folder_name:
+        return jsonify({'error': 'Folder name required'}), 400
+
+    folder_name = secure_filename(folder_name)
+
+    metadata = UserMetadata(get_metadb_path(current_user))
+    parent_path = metadata._sanitize_path(parent_path)
+
+    abs_dir = os.path.join(get_user_tree_path(current_user), parent_path.strip('/'), folder_name)
+    if os.path.exists(abs_dir):
+        return jsonify({'error': 'Folder already exists'}), 400
+
+    os.makedirs(abs_dir)
+
+    metadata.add_file(
+        filename=folder_name,
+        owner=current_user.id,
+        file_group=current_user.username,
+        size=0,
+        is_directory=True,
+        permissions=744,
+        path=parent_path
+    )
+
+    store_logger.info(f'User {current_user.username} created folder: {abs_dir}')
+    return jsonify({'message': 'Folder created successfully'})
 
 
 def calculate_folder_size(user, folder_path):
     """Return total size (bytes) of all files inside folder_path (direct + recursive)."""
-    metadata = UserMetadata(user.store_path)
+    metadata = UserMetadata(get_metadb_path(user))
     norm = metadata._sanitize_path(folder_path)
 
     conn = sqlite3.connect(metadata.db_path)
@@ -144,35 +172,29 @@ def calculate_folder_size(user, folder_path):
     return sum(sizes)
 
 
+@login_required
+def filter_permitted_files(files):
+    return [file for file in files
+            if file['is_directory'] or evaluate_read_permission(current_user, file)]
+
+
 @datastore.route('/retrieve/<user>')
 @login_required
 def retrieve_user_store(user):
     get_user_tree_path(user)
     get_metadb_path(user)
 
-    metadata = UserMetadata(user.store_path)
+    metadata = UserMetadata(get_metadb_path(user))
     req_path = request.args.get('path', '/')
     current_path = metadata._sanitize_path(req_path)
 
-    files_raw = metadata.get_files_in_path(current_path)
+    files = metadata.get_files(current_path)
     dirs_raw = metadata.list_subdirectories(current_path)
 
-    files = []
     folder_names_in_files = set()
-    for f in files_raw:
-        fid, name, owner, group, size, perms = f
-        is_folder = (float(size.split()[0]) == 0.0)
-        files.append({
-            'id': fid,
-            'name': name,
-            'owner': owner,
-            'group': group,
-            'size': size,
-            'permissions': perms,
-            'is_folder': is_folder
-        })
-        if is_folder:
-            folder_names_in_files.add(name)
+    for file in files:
+        if file['is_directory']:
+            folder_names_in_files.add(file['name'])
 
     for dirname, fullpath in dirs_raw:
         if dirname not in folder_names_in_files:
@@ -180,20 +202,29 @@ def retrieve_user_store(user):
             files.append({
                 'id': None,
                 'name': dirname,
-                'owner': user.username,
+                'owner': user.id,
                 'group': user.username,
-                'size': convert_from_bytes(folder_size),
-                'permissions': 'drwx------',
-                'is_folder': True
+                'size': folder_size,
+                'permissions': 744,
+                'is_directory': True
             })
 
     for f in files:
-        if f['is_folder']:
-            f['size'] = convert_from_bytes(calculate_folder_size(user, current_path.rstrip('/') + '/' + f['name']))
+        if f['is_directory']:
+            f['size'] = calculate_folder_size(user, current_path.rstrip('/') + '/' + f['name'])
 
-    files.sort(key=lambda x: (not x['is_folder'], x['name'].lower()))
+    files.sort(key=lambda x: (not x['is_directory'], x['name'].lower()))
 
-    return {'files': files, 'path': current_path}
+    files_avail = filter_permitted_files(files)
+
+    return {'files': files_avail, 'path': current_path}
+
+
+@datastore.route('/archive-list')
+@login_required
+def list_archives():
+    repo_path = get_repo_path(current_user)
+    return borg_api.list(repo_path, json=True)['archives']
 
 
 @datastore.route('/diff/<archive>', methods=['GET'])
@@ -262,12 +293,12 @@ def add_file():
         return jsonify({'error': 'No selected file'}), 400
 
     permissions = request.form.get('permissions', 740)
-    file_group = request.form.get('file-group', None)
+    file_group = request.form.get('file-group', current_user.username)
 
     upload_path = request.form.get('path', '/')
     filename = secure_filename(file.filename)
 
-    metadata = UserMetadata(current_user.store_path)
+    metadata = UserMetadata(get_metadb_path(current_user))
     upload_path = metadata._sanitize_path(upload_path)
 
     base_path = get_user_tree_path(current_user)
@@ -280,7 +311,13 @@ def add_file():
 
     # Add to metadata database
     file_size = os.path.getsize(filepath)
-    metadata.add_file(filename, current_user.username, file_group, file_size, permissions, path=upload_path)
+    metadata.add_file(filename=filename,
+                      owner=current_user.id,
+                      file_group=file_group,
+                      size=file_size,
+                      is_directory=False,
+                      permissions=permissions,
+                      path=upload_path)
 
     create_archive(current_user)
 
@@ -289,7 +326,7 @@ def add_file():
     return jsonify({
         'message': 'File uploaded successfully',
         'filename': filename,
-        'owner': current_user.username,
+        'owner': current_user.id,
         'file_group': file_group,
         'size': file_size,
         'permissions': permissions
@@ -303,7 +340,7 @@ def delete_file(filename, archive=True):
     data = request.get_json(silent=True) or {}
     raw_path = data.get('path', '/')
 
-    metadata = UserMetadata(current_user.store_path)
+    metadata = UserMetadata(get_metadb_path(current_user))
     current_path = metadata._sanitize_path(raw_path)
 
     base_tree = get_user_tree_path(current_user)
@@ -344,7 +381,7 @@ def delete_multiple():
     names = data.get('files', [])
     raw_path = data.get('path', '/')
 
-    metadata = UserMetadata(current_user.store_path)
+    metadata = UserMetadata(get_metadb_path(current_user))
     current_path = metadata._sanitize_path(raw_path)
 
     base_tree = get_user_tree_path(current_user)
@@ -399,7 +436,7 @@ def delete_multiple():
 @datastore.route('/download/<file_id>')
 @login_required
 def download_file(file_id):
-    metadata = UserMetadata(current_user.store_path)
+    metadata = UserMetadata(get_metadb_path(current_user))
     file_data = metadata.get_file_path_by_id(file_id)
 
     if not file_data:
@@ -419,7 +456,7 @@ def download_file(file_id):
 @datastore.route('/rename/<file_id>', methods=['POST'])
 @login_required
 def rename_file(file_id):
-    metadata = UserMetadata(current_user.store_path)
+    metadata = UserMetadata(get_metadb_path(current_user))
     file_data = metadata.get_file_path_by_id(file_id)
 
     if not file_data:
@@ -449,46 +486,12 @@ def rename_file(file_id):
     return jsonify({'success': 'File renamed successfully'}), 200
 
 
-@datastore.route('/create-folder', methods=['POST'])
-@login_required
-def create_folder():
-    data = request.get_json()
-    folder_name = data.get('folder_name', '').strip()
-    parent_path = data.get('path', '/')
-
-    if not folder_name:
-        return jsonify({'error': 'Folder name required'}), 400
-
-    folder_name = secure_filename(folder_name)
-
-    metadata = UserMetadata(current_user.store_path)
-    parent_path = metadata._sanitize_path(parent_path)
-
-    abs_dir = os.path.join(get_user_tree_path(current_user), parent_path.strip('/'), folder_name)
-    if os.path.exists(abs_dir):
-        return jsonify({'error': 'Folder already exists'}), 400
-
-    os.makedirs(abs_dir)
-
-    metadata.add_file(
-        filename=folder_name,
-        owner=current_user.username,
-        file_group=current_user.username,
-        size=0,
-        permissions=740,
-        path=parent_path
-    )
-
-    store_logger.info(f'User {current_user.username} created folder: {abs_dir}')
-    return jsonify({'message': 'Folder created successfully'})
-
-
 @datastore.route('/recalc-sizes')
 @login_required
 def recalc_sizes():
     """Recalculate file sizes for all files in metadata"""
     base_path = get_user_tree_path(current_user)
-    metadata = UserMetadata(current_user.store_path)
+    metadata = UserMetadata(get_metadb_path(current_user))
     conn = sqlite3.connect(metadata.db_path)
     cursor = conn.execute('SELECT id, filename, path FROM files')
     updated = 0
@@ -505,28 +508,6 @@ def recalc_sizes():
     return jsonify({'message': f'Updated {updated} file sizes.'})
 
 
-@login_required
-def filter_permitted_files(files):
-    permitted_groups = current_user.user_groups
-    permitted_files = []
-
-    for file in files:
-        fid, name, owner, group, size, perms = file
-        if evaluate_permission(permitted_groups, group, perms):
-            permitted_files.append(file)
-
-    return permitted_files
-
-
-# @datastore.route('/shared-files/<target_id>')
-# @login_required
-# def get_shared_fs(target_id):
-#     target_user = get_user_by_id(target_id)
-#     target_meta = UserMetadata(target_user.store_path)
-#     target_files = target_meta.get_files()
-
-#     return filter_permitted_files(target_files)
-
 @datastore.route('/shared-files')
 @login_required
 def get_shared_fs():
@@ -534,6 +515,12 @@ def get_shared_fs():
     user = get_user_by_id(user_id)
 
     data = retrieve_user_store(user)
+    file_list = data.get('files', [])
+
+    for file in file_list:
+        file['size'] = convert_from_bytes(file['size'])
+        file['owner'] = get_user_by_id(file['owner']).username
+        file['permissions'] = octal_to_string(file['permissions'])
 
     return render_template('shared-files.html',
                            file_list=data.get('files', []),
@@ -545,11 +532,17 @@ def get_shared_fs():
 @datastore.route('/files', methods=['GET', 'POST'])
 @login_required
 def file_viewer():
+    get_metadb_path(current_user)
     data = retrieve_user_store(current_user)
     file_list = data.get('files', [])
     dir_list = data.get('dirs', [])
     current_path = data.get('path', '/')
     archive_list = list_archives()
+
+    for file in file_list:
+        file['size'] = convert_from_bytes(file['size'])
+        file['owner'] = get_user_by_id(file['owner']).username
+        file['permissions'] = octal_to_string(file['permissions'])
 
     users_list = [(user['id'], user['username']) for user in list_users()]
     shareform = SharedFilesForm(owner_choices=users_list)

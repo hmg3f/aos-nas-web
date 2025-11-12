@@ -18,6 +18,7 @@
   <div id="page-data" data-current-path="{{ current_path }}"></div>
 
   <div class="subpanel" style="padding-top:0">
+    <!-- breadcrumbs -->
     <strong>Path:</strong>
     <a href="{{ url_for('/store.file_viewer') }}">/</a>
     {% set segs = current_path.strip('/').split('/') if current_path.strip('/') else [] %}
@@ -43,6 +44,7 @@
       </tr>
     </thead>
     <tbody>
+      <!-- parent dir -->
       {% if current_path != '/' %}
       {% set parent = '/' if not current_path.strip('/').count('/') else '/' + '/'.join(current_path.strip('/').split('/')[:-1]) %}
       <tr>
@@ -67,7 +69,7 @@
 	  <input type="checkbox" class="file-checkbox" data-filename="{{ item.name }}">
 	</td>
 	<td>
-	  {% if item.is_folder %}
+	  {% if item.is_directory %}
           <a href="{{ url_for('/store.file_viewer', path=(current_path.rstrip('/') ~ '/' ~ item.name).replace('//','/')) }}" class="overflow-hidden">📁 {{ item.name }}/</a>
 	  {% else %}
           <a href="{{ url_for('/store.download_file', file_id=item.id) }}" class="overflow-hidden file-listing" data-id="{{ item.id }}">

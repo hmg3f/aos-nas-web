@@ -73,7 +73,7 @@
 	  <input type="checkbox" class="file-checkbox" data-filename="{{ item.name }}">
 	</td>
 	<td>
-	  {% if item.is_folder %}
+	  {% if item.is_directory %}
           <a href="{{ url_for('/store.get_shared_fs', user_id=user_id, path=(current_path.rstrip('/') ~ '/' ~ item.name).replace('//','/')) }}" class="overflow-hidden">📁 {{ item.name }}/</a>
 	  {% else %}
           <a href="{{ url_for('/store.download_file', file_id=item.id) }}" class="overflow-hidden file-listing" data-id="{{ item.id }}">
