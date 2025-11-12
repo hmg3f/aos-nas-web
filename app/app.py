@@ -5,6 +5,7 @@ from flask import render_template
 from module.datastore import datastore
 from module.auth import auth, create_admin_user
 from module.util import DATABASE_PATH, app, db
+import psutil
 
 if not os.path.exists(DATABASE_PATH):
     os.makedirs(DATABASE_PATH)
@@ -23,6 +24,20 @@ db.init_app(app)
 @app.route('/')
 def home():
     return render_template('home.html', files_num=42)
+
+
+@app.route('/system_perf')
+def system_perf():
+    cpu_usage = psutil.cpu_percent()
+    disk_usage = psutil.disk_usage('/')
+    # in GB
+    total = f"{disk_usage.total / (1024**3):.2f}"
+    used = f"{disk_usage.used / (1024**3):.2f}"
+    free = f"{disk_usage.free / (1024**3):.2f}"
+    disk_percent = disk_usage.percent
+    sys_logs = ["log0", "log1", "log2"]
+
+    return render_template('system_perf.html', cpu_usage=cpu_usage, total=total, used=used, free=free, disk_percent=disk_percent, sys_logs=sys_logs)
 
 
 if __name__ == '__main__':
