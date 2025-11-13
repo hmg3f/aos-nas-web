@@ -120,24 +120,3 @@ def octal_to_dict(octal):
             'execute': all_perms & 1 != 0
         }
     }
-
-
-def evaluate_read_permission(user, file):
-    user_groups = user.user_groups.split(',')
-    file_perms = file['permissions']
-    file_owner = file['owner']
-    file_group = file['group']
-
-    perms_dict = octal_to_dict(int(file_perms))
-
-    if user.username == file_owner:
-        return True
-
-    if perms_dict['all']['read']:
-        return True
-
-    if file_group in user_groups:
-        if perms_dict['group']['read']:
-            return True
-
-    return False

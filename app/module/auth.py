@@ -5,7 +5,7 @@ from wtforms import StringField, PasswordField, SelectField, SubmitField, Boolea
 from wtforms.validators import InputRequired, Length, EqualTo, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from module.util import DATABASE_PATH, app, db, auth_logger
+from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict
 
 import hashlib
 import time
@@ -96,6 +96,30 @@ class AccountManagementForm(FlaskForm):
 
 def get_user_by_id(user_id):
     return User.query.filter_by(id=user_id).first()
+
+
+def evaluate_read_permission(user, file):
+    user_groups = user.user_groups.split(',')
+    file_perms = file['permissions']
+    file_owner = file['owner']
+    file_group = file['group']
+
+    perms_dict = octal_to_dict(int(file_perms))
+
+    if user.has_flag(User.ADMIN):
+        return True
+
+    if user.username == file_owner:
+        return True
+
+    if perms_dict['all']['read']:
+        return True
+
+    if file_group in user_groups:
+        if perms_dict['group']['read']:
+            return True
+
+    return False
 
 
 @auth.route('/login', methods=['GET', 'POST'])
@@ -236,15 +260,17 @@ def create_admin_user():
 @auth.route('/list-users')
 @login_required
 def list_users():
-    users_list = User.query.filter(
-        ~User.flags.op('&')(User.HIDDEN)
-    ).filter(
-        User.id != current_user.id
-    ).all()
+    if current_user.has_flag(User.ADMIN):
+        users_list = User.query.filter(User.id != current_user.id).all()
+    else:
+        users_list = User.query.filter(
+            ~User.flags.op('&')(User.HIDDEN)
+        ).filter(
+            User.id != current_user.id
+        ).all()
 
     users_data = []
     for user in users_list:
-        print(f'HIDDEN_FLAG: {user.has_flag(User.HIDDEN)}\nADMIN_FLAG: {user.has_flag(User.ADMIN)}\nFLAGS: {user.flags}')
         users_data.append({
             'id': user.id,
             'username': user.username,

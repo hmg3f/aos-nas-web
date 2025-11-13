@@ -12,8 +12,8 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, SubmitField
 from werkzeug.utils import secure_filename
 
-from module.auth import list_users, get_user_by_id
-from module.util import db, store_logger, convert_from_bytes, evaluate_read_permission, octal_to_string
+from module.auth import list_users, get_user_by_id, evaluate_read_permission
+from module.util import db, store_logger, convert_from_bytes, octal_to_string
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
