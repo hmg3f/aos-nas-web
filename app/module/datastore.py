@@ -433,10 +433,14 @@ def delete_multiple():
     return jsonify({'message': f'Deleted {deleted_count} item(s)'}), 200
 
 
-@datastore.route('/download/<file_id>')
+@datastore.route('/download')
 @login_required
-def download_file(file_id):
-    metadata = UserMetadata(get_metadb_path(current_user))
+def download_file():
+    user_id = request.args.get('user_id')
+    user = get_user_by_id(user_id)
+
+    metadata = UserMetadata(get_metadb_path(user))
+    file_id = request.args.get('file_id')
     file_data = metadata.get_file_path_by_id(file_id)
 
     if not file_data:
@@ -444,11 +448,12 @@ def download_file(file_id):
 
     file_name, file_path = file_data
     if file_path == '/':
-        file_path = get_user_tree_path(current_user)
+        file_path = get_user_tree_path(user)
     else:
-        file_path = os.path.join(get_user_tree_path(current_user), file_path)
+        file_path = os.path.join(get_user_tree_path(user), file_path.lstrip('/'))
+        print(file_path)
 
-    store_logger.info(f'User {current_user.username} downloaded file: {file_path}')
+    store_logger.info(f'User {current_user.username} downloaded file: <store:{user.username}>{file_path}')
 
     return send_from_directory(file_path, file_name, as_attachment=True)
 
