@@ -6,7 +6,7 @@ import datetime
 import shutil
 import sqlite3
 
-from flask import Blueprint, request, jsonify, send_from_directory, render_template, url_for, redirect
+from flask import Blueprint, request, jsonify, send_from_directory, render_template, url_for, redirect, flash
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import SelectField, SubmitField
@@ -388,6 +388,8 @@ def delete_files():
         current_user.num_files = max(0, current_user.num_files - deleted_count)
         db.session.commit()
         create_archive(current_user)
+
+    flash(f'{deleted_count} files successfuly deleted.', 'success')
 
     store_logger.info(f'User {current_user.username} deleted {deleted_count} item(s) from {current_path}')
     return jsonify({'message': f'Deleted {deleted_count} item(s)'}), 200
