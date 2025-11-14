@@ -28,18 +28,7 @@ def home():
 
 @app.route('/system_perf')
 def system_perf():
-    # this code will be changed later
-    cpu_usage = psutil.cpu_percent()
-    disk_usage = psutil.disk_usage('/')
-    # in GB
-    total = f"{disk_usage.total / (1024**3):.2f}"
-    used = f"{disk_usage.used / (1024**3):.2f}"
-    free = f"{disk_usage.free / (1024**3):.2f}"
-    disk_percent = disk_usage.percent
-    sys_logs = ["log0", "log1", "log2"]
-
-    return render_template('system_perf.html', cpu_usage=cpu_usage, total=total, used=used, free=free, disk_percent=disk_percent, sys_logs=sys_logs)
-
+    return render_template('system_perf.html')
 
 @app.route('/system_stats')
 def generate_sys_stats():
@@ -49,7 +38,24 @@ def generate_sys_stats():
     used = f"{disk_usage.used / (1024**3):.2f}"
     free = f"{disk_usage.free / (1024**3):.2f}"
     disk_percent = disk_usage.percent
-    sys_logs = ["log0", "log1", "log2"]
+
+    try:
+        with open('log/auth.log', 'r') as log:
+            text = log.read()
+            log0 = {'auth.log': text}
+    except FileNotFoundError:
+        print("FILENOTFOUND0")
+        log0 = {'auth.log', 'No data'}
+
+    try:
+        with open('log/store.log', 'r') as log:
+            text = log.read()
+            log1 = {'store.log': text}
+    except FileNotFoundError:
+        print("FILENOTFOUND1")
+        log1 = {'store.log','No data'}        
+
+    sys_logs = [log0, log1]
 
     stats = {
         "success": "System stats retrieved successfully.",
