@@ -37,46 +37,6 @@ body {
     margin-bottom: 10px;
 }
 
-#login form input[type=password],
-#login form input[type=text] {
-    background-color: #000;
-    font-family: Brass Mono, Monospace;
-    font-size: 1rem;
-    color: #fff;
-    border: 3px inset #989898;
-}
-
-#login form input[type=password]:focus,
-#login form input[type=text]:focus {
-    outline: none;
-}
-
-#login form select {
-    background-color: #3e3e3e;
-    border: 2px solid #3e3e3e;
-    font-family: Brass Mono, Monospace;
-    font-size: 1rem;
-    color: #fff;
-}
-
-#login form select:hover {
-    cursor: pointer;
-}
-
-#login form input[type=submit] {
-    background-color: #3e3e3e;
-    border: 2px solid #3e3e3e;
-    font-family: Brass Mono, Monospace;
-    font-size: 1rem;
-    color: #fff;
-}
-
-#login form input[type=submit]:hover {
-    background-color: #646464;
-    border: 2px solid #646464;
-    cursor: pointer;
-}
-
 #home {
     width: 480px;
     margin: 0 auto;
@@ -263,6 +223,11 @@ body {
     width: 400px;
 }
 
+.fs-controller {
+    display: flex;
+    justify-content: center;
+}
+
 .popup {
     background-color: #303030;
     font-family: Brass Mono, Monospace;
@@ -315,6 +280,75 @@ body {
 .status-error {
     color: #ff7c7c;
     margin-top: 5px;
+}
+
+#account-manager {
+    width: 500px;
+    margin: 0 auto;
+}
+
+#account-manager form {
+    padding: 10px;
+}
+
+#account-manager .form-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    justify-content: center;
+}
+
+#account-manager .form-group label {
+    width: 200px;
+}
+
+input[type=password],
+input[type=text] {
+    background-color: #000;
+    font-family: Brass Mono, Monospace;
+    font-size: 1rem;
+    color: #fff;
+    border: 3px inset #989898;
+}
+
+input[type=password]:focus,
+input[type=text]:focus {
+    outline: none;
+}
+
+select {
+    background-color: #3e3e3e;
+    border: 2px solid #3e3e3e;
+    font-family: Brass Mono, Monospace;
+    font-size: 1rem;
+    color: #fff;
+}
+
+select:hover {
+    cursor: pointer;
+}
+
+input[type=file] {
+    font-family: Brass Mono, Monospace;
+    font-size: 1rem;
+}
+
+input[type=submit],
+input[type=file]::file-selector-button,
+button {
+    background-color: #3e3e3e;
+    border: 2px solid #3e3e3e;
+    font-family: Brass Mono, Monospace;
+    font-size: 1rem;
+    color: #fff;
+}
+
+input[type=submit]:hover,
+input[type=file]::file-selector-button:hover,
+button:hover {
+    background-color: #646464;
+    border: 2px solid #646464;
+    cursor: pointer;
 }
 
 

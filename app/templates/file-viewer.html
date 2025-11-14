@@ -20,12 +20,12 @@
   <div class="subpanel" style="padding-top:0">
     <!-- breadcrumbs -->
     <strong>Path:</strong>
-    <a href="{{ url_for('/store.file_viewer') }}">/</a>
+    <a href="{{ url_for('/store.file_viewer') }}">root</a>
     {% set segs = current_path.strip('/').split('/') if current_path.strip('/') else [] %}
     {% set acc = '' %}
     {% for s in segs %}
-      {% set acc = acc + '/' + s %}
-      / <a href="{{ url_for('/store.file_viewer', path=acc) }}">{{ s }}</a>
+    {% set acc = acc + '/' + s %}
+    / <a href="{{ url_for('/store.file_viewer', path=acc) }}">{{ s }}</a>
     {% endfor %}
   </div>
 
@@ -54,13 +54,14 @@
       </tr>
       {% endif %}
 
-      {% for dirname, fullpath in dir_list %}
-      <tr>
-        <td></td>
-        <td><a href="{{ url_for('/store.file_viewer', path=fullpath) }}" class="overflow-hidden">📁 {{ dirname }}/</a></td>
-        <td colspan="4"></td>
-      </tr>
-      {% endfor %}
+      <!-- TODO: Stage for deletion -->
+      <!-- {% for dirname, fullpath in dir_list %} -->
+      <!-- <tr> -->
+      <!--   <td></td> -->
+      <!--   <td><a href="{{ url_for('/store.file_viewer', path=fullpath) }}" class="overflow-hidden">📁 {{ dirname }}/</a></td> -->
+      <!--   <td colspan="4"></td> -->
+      <!-- </tr> -->
+      <!-- {% endfor %} -->
 
       <!-- Files (only for current directory) -->
       {% for item in file_list %}
@@ -103,6 +104,7 @@
     <button id="delete-button" disabled>Delete Selected</button>
   </div>
 
+  <div class="fs-controller">
   <section id="new-folder" class="subpanel">
     <h2>New Folder</h2>
     <div class="form-group">
@@ -115,7 +117,7 @@
   <section id="file-upload" class="subpanel">
     <h2>Upload File</h2>
     <form method="POST" id="upload-form" action="{{ url_for('/store.add_file') }}" enctype="multipart/form-data">
-    <input type="hidden" name="path" id="upload-path" value="{{ current_path }}">
+      <input type="hidden" name="path" id="upload-path" value="{{ current_path }}">
 
       <div class="form-group">
         <label for="file-input">Choose file:</label>
@@ -199,6 +201,7 @@
       </div>
     </form>
   </section>
+  </div>
 </section>
 {% endblock %}
 
