@@ -4,11 +4,9 @@ function calculateOctalPermissions() {
 
     perms.forEach(entity => {
         let value = 0;
-	
         if (document.querySelector(`input[name="perm_${entity}_read"]`).checked) value += 4;
         if (document.querySelector(`input[name="perm_${entity}_write"]`).checked) value += 2;
         if (document.querySelector(`input[name="perm_${entity}_execute"]`).checked) value += 1;
-	
         octal += value;
     });
 
@@ -16,63 +14,73 @@ function calculateOctalPermissions() {
 }
 
 function updatePermissionDisplay() {
-    let octal = calculateOctalPermissions();
-    document.getElementById('octal-display').textContent = octal;
+    document.getElementById('octal-display').textContent = calculateOctalPermissions();
 }
 
-document.querySelectorAll('.permissions-grid input[type="checkbox"]').forEach(checkbox => {
-    checkbox.addEventListener('change', updatePermissionDisplay);
+document.querySelectorAll('.permissions-grid input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', updatePermissionDisplay);
 });
 
 document.getElementById('upload-form').addEventListener('submit', function(e) {
     e.preventDefault();
-    
-    const formData = new FormData(this);
 
-    const groupInput = document.getElementById('group-input');
-    formData.append('file-group', groupInput.value);
-    
-    const octal = calculateOctalPermissions();
-    formData.append('permissions', octal);
-    
+    const fileInput = document.querySelector('input[name="file"]');
+    const files = fileInput.files;
+
+    if (!files || files.length === 0) {
+        alert("No files selected.");
+        return;
+    }
+
+    const formData = new FormData();
+    const groupInput = document.getElementById('group-input').value;
+    const permissions = calculateOctalPermissions();
+    const uploadPath = document.getElementById('upload-path').value;
+
+    // append shared attributes
+    formData.append("file-group", groupInput);
+    formData.append("permissions", permissions);
+    formData.append("path", uploadPath);
+
+    // append multiple files
+    for (let f of files) {
+        formData.append("file[]", f);
+    }
+
     const statusDiv = document.getElementById('upload-status');
     const submitBtn = this.querySelector('button[type="submit"]');
-    
-    // Disable button and show loading
+
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Uploading...';
-    statusDiv.textContent = 'Uploading file...';
-    statusDiv.className = 'status-info';
-    
+    submitBtn.textContent = "Uploading...";
+    statusDiv.textContent = "Uploading files...";
+    statusDiv.className = "status-info";
+
     fetch(this.action, {
-        method: 'POST',
+        method: "POST",
         body: formData
     })
-        .then(response => response.json())
+        .then(resp => resp.json())
         .then(data => {
             if (data.error) {
-		statusDiv.textContent = 'Error: ' + data.error;
-		statusDiv.className = 'status-error';
+                statusDiv.textContent = "Error: " + data.error;
+                statusDiv.className = "status-error";
             } else {
-		statusDiv.textContent = 'Success! File uploaded: ' + data.filename;
-		statusDiv.className = 'status-success';
-		
-		// Reset form
-		document.getElementById('upload-form').reset();
-		updatePermissionDisplay();
-		
-		// Reload page after 2 second to show new file
-		setTimeout(() => {
-		    window.location.reload();
-		}, 2000);
+                statusDiv.textContent = `Success! Uploaded ${data.count} file(s).`;
+                statusDiv.className = 'status-success';
+
+                document.getElementById("upload-form").reset();
+                updatePermissionDisplay();
+
+                setTimeout(() => window.location.reload(), 1800);
             }
         })
-        .catch(error => {
-            statusDiv.textContent = 'Upload failed: ' + error.message;
-            statusDiv.className = 'status-error';
+        .catch(err => {
+            statusDiv.textContent = "Upload failed: " + err.message;
+            statusDiv.className = "status-error";
         })
         .finally(() => {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Upload';
+            submitBtn.textContent = "Upload";
         });
 });
+

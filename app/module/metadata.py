@@ -135,3 +135,4 @@ class UserMetadata:
             return file_data
         finally:
             session.close()
+

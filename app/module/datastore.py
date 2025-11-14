@@ -285,18 +285,14 @@ def restore_archive(archive):
 @datastore.route('/add', methods=['POST'])
 @login_required
 def add_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+    # Multiple files are sent as "file[]" field
+    files = request.files.getlist("file[]")
+    if not files or files == ['']:
+        return jsonify({'error': 'No files provided'}), 400
 
     permissions = request.form.get('permissions', 740)
     file_group = request.form.get('file-group', current_user.username)
-
     upload_path = request.form.get('path', '/')
-    filename = secure_filename(file.filename)
 
     metadata = UserMetadata(get_metadb_path(current_user))
     upload_path = metadata._sanitize_path(upload_path)
@@ -306,30 +302,42 @@ def add_file():
     if not os.path.exists(abs_dir):
         os.makedirs(abs_dir)
 
-    filepath = os.path.join(abs_dir, filename)
-    file.save(filepath)
+    uploaded = []
 
-    # Add to metadata database
-    file_size = os.path.getsize(filepath)
-    metadata.add_file(filename=filename,
-                      owner=current_user.id,
-                      file_group=file_group,
-                      size=file_size,
-                      is_directory=False,
-                      permissions=permissions,
-                      path=upload_path)
+    for file in files:
+        if file.filename == '':
+            continue
 
-    create_archive(current_user)
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(abs_dir, filename)
+        file.save(filepath)
 
-    store_logger.info(f'User {current_user.username} uploaded file: {filename} to {upload_path}')
+        file_size = os.path.getsize(filepath)
+
+        metadata.add_file(
+            filename=filename,
+            owner=current_user.id,
+            file_group=file_group,
+            size=file_size,
+            is_directory=False,
+            permissions=permissions,
+            path=upload_path
+        )
+
+        uploaded.append(filename)
+        store_logger.info(
+            f'User {current_user.username} uploaded file: {filename} to {upload_path}'
+        )
+
+    if uploaded:
+        current_user.num_files += len(uploaded)
+        db.session.commit()
+        create_archive(current_user)
 
     return jsonify({
-        'message': 'File uploaded successfully',
-        'filename': filename,
-        'owner': current_user.id,
-        'file_group': file_group,
-        'size': file_size,
-        'permissions': permissions
+        'message': f"Uploaded {len(uploaded)} file(s) successfully",
+        'count': len(uploaded),
+        'files': uploaded
     }), 201
 
 
@@ -525,3 +533,4 @@ def file_viewer():
         archive_list=archive_list,
         shareform=shareform
     )
+
