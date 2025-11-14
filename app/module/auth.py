@@ -109,7 +109,7 @@ def evaluate_read_permission(user, file):
     if user.has_flag(User.ADMIN):
         return True
 
-    if user.username == file_owner:
+    if user.id == file_owner:
         return True
 
     if perms_dict['all']['read']:
@@ -266,6 +266,8 @@ def list_users():
         users_list = User.query.filter(
             ~User.flags.op('&')(User.HIDDEN)
         ).filter(
+            User.enabled
+        ).filter(
             User.id != current_user.id
         ).all()
 
@@ -283,8 +285,7 @@ def list_users():
 @auth.route('/admin/create-user', methods=['POST'])
 @login_required
 def admin_create_user():
-    if current_user.username not in ['admin', 'root']:
-
+    if not current_user.has_flag(User.ADMIN):
         return jsonify({'error': 'Insufficient permissions'}), 403
 
     data = request.get_json()
