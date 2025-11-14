@@ -333,50 +333,9 @@ def add_file():
     }), 201
 
 
-@datastore.route('/delete/<filename>', methods=['DELETE'])
+@datastore.route('/delete-files', methods=['DELETE'])
 @login_required
-def delete_file(filename, archive=True):
-    """Delete a single file or folder in the current directory (JSON must include `path`)."""
-    data = request.get_json(silent=True) or {}
-    raw_path = data.get('path', '/')
-
-    metadata = UserMetadata(get_metadb_path(current_user))
-    current_path = metadata._sanitize_path(raw_path)
-
-    base_tree = get_user_tree_path(current_user)
-    safe_name = secure_filename(filename)
-    abs_target = os.path.join(base_tree, current_path.strip('/'), safe_name)
-
-    if not os.path.exists(abs_target):
-        return jsonify({'error': 'File or folder not found'}), 404
-
-    conn = sqlite3.connect(metadata.db_path)
-
-    if os.path.isdir(abs_target):
-        shutil.rmtree(abs_target)
-        folder_full_path = '/' + safe_name if current_path == '/' else current_path.rstrip('/') + '/' + safe_name
-        conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
-        conn.execute('DELETE FROM files WHERE path = ? OR path LIKE ?', (folder_full_path, folder_full_path.rstrip('/') + '/%'))
-    else:
-        os.remove(abs_target)
-        conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
-
-    conn.commit()
-    conn.close()
-
-    current_user.num_files = max(0, current_user.num_files - 1)
-    db.session.commit()
-
-    if archive:
-        create_archive(current_user)
-
-    store_logger.info(f'User {current_user.username} deleted: {abs_target}')
-    return jsonify({'message': 'Deleted successfully'}), 200
-
-
-@datastore.route('/delete-multiple', methods=['DELETE'])
-@login_required
-def delete_multiple():
+def delete_files():
     data = request.get_json() or {}
     names = data.get('files', [])
     raw_path = data.get('path', '/')
@@ -387,6 +346,7 @@ def delete_multiple():
     base_tree = get_user_tree_path(current_user)
     deleted_count = 0
 
+    # TODO: move this to metadata.py and switch to sqlalchemy
     # metadata db connection for batch ops
     conn = sqlite3.connect(metadata.db_path)
 

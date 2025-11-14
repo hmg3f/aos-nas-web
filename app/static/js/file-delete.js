@@ -42,29 +42,25 @@ document.addEventListener('DOMContentLoaded', function () {
 	const pageDataEl = document.getElementById('page-data');
 	const currentPath = pageDataEl ? pageDataEl.dataset.currentPath || '/' : '/';
 
-	fetch('/store/delete-multiple', {
-	  method: 'DELETE',
-	  headers: {
-	    'Content-Type': 'application/json',
-	  },
-	  body: JSON.stringify({ files: selectedFiles, path: currentPath }),
-	  credentials: 'same-origin'
+	fetch('/store/delete-files', {
+	    method: 'DELETE',
+	    headers: {
+		'Content-Type': 'application/json',
+	    },
+	    body: JSON.stringify({ files: selectedFiles, path: currentPath }),
+	    credentials: 'same-origin'
 	})
-	  .then(response => {
-	    if (response.ok) {
-	      alert('Selected items deleted successfully');
-	      toggleDeleteButton();
-	      setTimeout(() => {
-		window.location.reload();
-	      }, 1000);
-	    } else {
-	      response.json().then(d => alert(d.error || 'Error deleting items'));
-	    }
-	  })
-	  .catch(error => {
-	    console.error('Error:', error);
-	    alert('Error deleting items');
-	  });
+	    .then(response => {
+		if (response.ok) {
+		    toggleDeleteButton();
+		    setTimeout(() => {
+			window.location.reload();
+		    }, 1000);
+		}
+	    })
+	    .catch(error => {
+		console.error('Error:', error);
+	    });
     });
 
     // enable/disable delete button based on checkbox selection

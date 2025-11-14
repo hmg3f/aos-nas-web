@@ -54,18 +54,6 @@
       </tr>
       {% endif %}
 
-      {% for dirname, fullpath in dir_list %}
-      <tr>
-        <td></td>
-        <td>
-	  <a href="{{ url_for('/store.get_shared_fs', path=fullpath, user_id=user_id) }}" class="overflow-hidden">
-	    📁 {{ dirname }}/
-	  </a>
-	</td>
-        <td colspan="4"></td>
-      </tr>
-      {% endfor %}
-
       <!-- Files (only for current directory) -->
       {% for item in file_list %}
       <tr>
