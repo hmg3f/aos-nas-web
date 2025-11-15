@@ -10,6 +10,7 @@ from flask import Blueprint, request, jsonify, send_from_directory, render_templ
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import SelectField, SubmitField
+from wtforms.validators import InputRequired
 from werkzeug.utils import secure_filename
 
 from module.auth import list_users, get_user_by_id, evaluate_read_permission
@@ -23,7 +24,9 @@ borg_api.set_environ(BORG_PASSPHRASE="pass")
 
 
 class SharedFilesForm(FlaskForm):
-    owner = SelectField('Owner:', coerce=int)
+    owner = SelectField('Owner:', coerce=int,
+                        validators=[InputRequired()],
+                        render_kw={'placeholder': 'Select a User'})
     submit = SubmitField('View Files')
 
     def __init__(self, owner_choices=None, *args, **kwargs):
@@ -533,4 +536,3 @@ def file_viewer():
         archive_list=archive_list,
         shareform=shareform
     )
-

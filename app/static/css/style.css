@@ -353,6 +353,14 @@ button:hover {
     cursor: pointer;
 }
 
+input[type=submit]:disabled,
+button:disabled {
+    background-color: #303030;
+    border-color: #3e3e3e;
+    color: #3e3e3e;
+    cursor: not-allowed;
+}
+
 
 /* Styling added by Jacob for System Performance page */
 
