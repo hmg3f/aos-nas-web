@@ -186,6 +186,16 @@ body {
     padding: 10px;
 }
 
+#new-folder .form-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+#new-folder .form-group label {
+    width: 200px;
+}
+
 .permissions-grid {
     display: grid;
     grid-template-columns: auto repeat(3, 1fr);

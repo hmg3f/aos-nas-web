@@ -1,5 +1,6 @@
 document.getElementById('create-folder-button').addEventListener('click', function() {
     const folderName = document.getElementById('new-folder-name').value.trim();
+    const folderPerms = document.getElementById('new-folder-perms').value.trim();
     const status = document.getElementById('folder-status');
     const currentPath = document.getElementById('page-data').getAttribute('data-current-path');
 
@@ -9,11 +10,18 @@ document.getElementById('create-folder-button').addEventListener('click', functi
 	return;
     }
 
+    if (!folderPerms) {
+	status.textContent = 'Please enter the permissions for the folder.';
+	status.className = 'status-error';
+	return;
+    }
+
     fetch('/store/create-folder', {
 	method: 'POST',
 	headers: { 'Content-Type': 'application/json' },
 	body: JSON.stringify({
 	    folder_name: folderName,
+	    folder_perms: folderPerms,
 	    path: currentPath
 	}),
     })

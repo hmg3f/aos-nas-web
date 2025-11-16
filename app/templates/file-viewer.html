@@ -105,6 +105,14 @@
 <section id="toolbox" class="panel">
   <h1>Toolbox</h1>
   <div class="content">
+    <div class="user_info">
+      <span>Currently logged in as: </span>
+      {% if current_user.has_flag(1) %}
+      <span style="color: #9d1f1f">{{ current_user.username }}</span>
+      {% else %}
+      <span style="color: #a0afef">{{ current_user.username }}</span>
+      {% endif %}
+    </div>
     <div class="controls">
       <a href="{{ url_for('/auth.logout') }}">◀ Logout</a>
       <a href="{{ url_for('/auth.account_manager') }}">Account Management</a>
@@ -118,9 +126,14 @@
     <h1>New Folder</h1>
     <div class="content">
       <div class="form-group">
-	<input type="text" id="new-folder-name" placeholder="Folder name" required>
-	<button id="create-folder-button">Create Folder</button>
+	<label for="new-folder-name">Folder name: </label>
+	<input type="text" id="new-folder-name" placeholder="name" autocomplete="off" required>
       </div>
+      <div class="form-group">
+	<label for="new-folder-perms">Folder permissions: </label>
+	<input type="text" id="new-folder-perms" value="744" autocomplete="off" required>
+      </div>
+      <button id="create-folder-button">Create Folder</button>
       <div id="folder-status"></div>
     </div>
   </section>

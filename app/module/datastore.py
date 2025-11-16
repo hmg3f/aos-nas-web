@@ -122,6 +122,7 @@ def borg_unmount(user):
 def create_folder():
     data = request.get_json()
     folder_name = data.get('folder_name', '').strip()
+    permissions = data.get('folder_perms', 744).strip()
     parent_path = data.get('path', '/')
 
     if not folder_name:
@@ -144,7 +145,7 @@ def create_folder():
         file_group=current_user.username,
         size=0,
         is_directory=True,
-        permissions=744,
+        permissions=int(permissions),
         path=parent_path
     )
 

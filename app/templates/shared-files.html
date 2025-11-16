@@ -102,10 +102,19 @@
 
 <section id="toolbox" class="panel">
   <h1>Toolbox</h1>
-  
-  <div class="controls">
-    <a href="{{ url_for('/store.file_viewer') }}">◀ Return</a>
-    <button id="delete-button" disabled>Delete Selected</button>
+  <div class="content">
+    <div class="user_info">
+      <span>Currently logged in as: </span>
+      {% if current_user.has_flag(1) %}
+      <span style="color: #9d1f1f">{{ current_user.username }}</span>
+      {% else %}
+      <span style="color: #a0afef">{{ current_user.username }}</span>
+      {% endif %}
+    </div>
+    <div class="controls">
+      <a href="{{ url_for('/store.file_viewer') }}">◀ Return</a>
+      <button id="delete-button" disabled>Delete Selected</button>
+    </div>
   </div>
 </section>
 
