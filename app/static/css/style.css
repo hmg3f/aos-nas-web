@@ -449,10 +449,6 @@ button:disabled {
 	text-align: center;
 }
 
-.performance_title {
-	text-align: center;
-}
-
 a.performance_links {
 	color: white;
 	text-decoration: none;
@@ -467,3 +463,9 @@ a.performance_links:hover {
 	text-decoration: underline;
 }
 
+.log_container {
+    padding: 10px;
+    overflow: scroll;
+    background-color: #1e1e1e;
+    max-height: 500px;
+}

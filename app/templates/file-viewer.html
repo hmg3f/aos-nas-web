@@ -116,6 +116,9 @@
     <div class="controls">
       <a href="{{ url_for('/auth.logout') }}">◀ Logout</a>
       <a href="{{ url_for('/auth.account_manager') }}">Account Management</a>
+      {% if current_user.has_flag(1) %}
+      <a href="{{url_for('system_perf')}}">System Performance</a>
+      {% endif %}
       <button id="delete-button" disabled>Delete Selected</button>
     </div>
   </div>

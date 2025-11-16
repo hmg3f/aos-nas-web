@@ -1,30 +1,38 @@
 {% extends "base.html" %}
 {% block page_title %}System Performance{% endblock %}
 {% block content %}
-<div class="performance_window">
-    <h1 class="performance_title">System Performance</h1>
+<section class="panel">
+  <h1>System Performance</h1>
 
+  <div class="content">
     <!-- System Performance Window Goes Here -->
+    <h2>CPU Utilization</h2>
+    <div id="cpu_container"></div>
+
+      <!-- System Performance Window Goes Here -->
     <div class="performance_window">
-        <h2>CPU Utilization</h2>
-        <div id="cpu_container"></div>
-
-	<!-- System Performance Window Goes Here -->
-	<div class="performance_window">
-		<h2>CPU Utilization</h2>
-		<p id="cpu_container"></p>
-		<h2>Disk Usage</h2>
-		<p id="disk_usage_container"></p>
-		<h2>System Logs</h2>
-		<p id="log_container"></p>
-	</div>
-
-        <h2>System Logs</h2>
-        <div id="log_container"></div>
+      <h2>CPU Utilization</h2>
+      <p id="cpu_container"></p>
+      <h2>Disk Usage</h2>
+      <p id="disk_usage_container"></p>
     </div>
+    <div class="controls">
+      <a href="{{url_for('home')}}">Return to Home</a>
+    </div>
+  </div>
+</section>
 
-    <a href="{{url_for('home')}}" class="performance_links">Return to Home</a>
-</div>
+<section class="panel">
+  <h1>System Logs</h1>
+  <div class="subpanel">
+    <h2>Authentication Log:</h2>
+    <div id="auth_log" class="log_container"></div>
+  </div>
+  <div class="subpanel">
+    <h2>Store Log:</h2>
+    <div id="store_log" class="log_container"></div>
+  </div>
+</section>
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/system_perf.js') }}"></script>

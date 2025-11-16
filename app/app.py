@@ -30,6 +30,7 @@ def home():
 def system_perf():
     return render_template('system_perf.html')
 
+
 @app.route('/system_stats')
 def generate_sys_stats():
     cpu_usage = psutil.cpu_percent()
@@ -41,21 +42,19 @@ def generate_sys_stats():
 
     try:
         with open('log/auth.log', 'r') as log:
-            text = log.read()
-            log0 = {'auth.log': text}
+            auth_log = log.readlines()
     except FileNotFoundError:
         print("FILENOTFOUND0")
-        log0 = {'auth.log', 'No data'}
+        auth_log = 'No data'
 
     try:
         with open('log/store.log', 'r') as log:
-            text = log.read()
-            log1 = {'store.log': text}
+            store_log = log.readlines()
     except FileNotFoundError:
         print("FILENOTFOUND1")
-        log1 = {'store.log','No data'}        
+        store_log = 'No data'
 
-    sys_logs = [log0, log1]
+    sys_logs = {'auth': auth_log, 'store': store_log}
 
     stats = {
         "success": "System stats retrieved successfully.",
