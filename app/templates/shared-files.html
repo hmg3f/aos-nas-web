@@ -72,7 +72,10 @@
 	     data-dir="{{ item.is_directory }}"
 	     data-perms="{{ item.permissions }}"
 	     data-group="{{ item.file_group }}"
-	     data-user="{{ current_user.id }}">📁 {{ item.name }}/</a>
+	     data-user="{{ current_user.id }}"
+	     data-name="{{ item.name }}">
+	    📁 {{ item.name }}/
+	  </a>
 	  {% else %}
           <a href="{{ url_for('/store.download_file', user_id=user_id, file_id=item.id) }}"
 	     class="overflow-hidden file-listing"
@@ -80,7 +83,8 @@
 	     data-dir="{{ item.is_directory }}"
 	     data-perms="{{ item.permissions }}"
 	     data-group="{{ item.file_group }}"
-	     data-user="{{ user_id }}">
+	     data-user="{{ user_id }}"
+	     data-name="{{ item.name }}">
             {{ item.name }}
           </a>
 	  {% endif %}
@@ -124,19 +128,37 @@
 <section id="set-perms-prompt" class="prompt">
   <h1>Edit Permissions</h1>
   <div class="content">
-    <div class="form-group">
-      <label for="set-group-input">File Group:</label>
-      <input type="text" id="set-group-input" name="set-group">
-    </div>
-    
-    <div class="form-group">
-      <label for="set-perms-input">File Permissions (octal):</label>
-      <input type="text" id="set-perms-input" name="set-group">
-    </div>
+    <form id="set-perms-form">
+      <div class="form-group">
+	<label for="set-group-input">File Group:</label>
+	<input type="text" id="set-group-input" name="set-group">
+      </div>
+      
+      <div class="form-group">
+	<label for="set-perms-input">File Permissions (octal):</label>
+	<input type="text" id="set-perms-input" name="set-group">
+      </div>
 
-    <div class="form-group">
-      <button type="submit" id="set-perms-submit" name="submit-perms">Update Permissions</button>
-    </div>
+      <div class="form-group">
+	<input type="submit" id="set-perms-submit" name="submit-perms">
+      </div>
+    </form>
+  </div>
+</section>
+
+<section id="rename-prompt" class="prompt">
+  <h1>Edit Filename</h1>
+  <div class="content">
+    <form method="POST" id="rename-form">
+      <div class="form-group">
+	<label for="rename-input">Set name:</label>
+	<input type="text" id="rename-input" name="rename">
+      </div>
+
+      <div class="form-group">
+	<input type="submit" id="rename-submit" name="submit-rename">
+      </div>
+    </form>
   </div>
 </section>
 {% endblock %}

@@ -8,8 +8,8 @@ import sqlite3
 from flask import Blueprint, request, jsonify, send_from_directory, render_template, url_for, redirect, flash
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import SelectField, SubmitField
-from wtforms.validators import InputRequired
+from wtforms import SelectField, SubmitField, StringField
+from wtforms.validators import InputRequired, Length, Regexp
 from werkzeug.utils import secure_filename
 
 from module.auth import list_users, get_user_by_id, evaluate_read_permission, evaluate_write_permission, evaluate_exec_permission
@@ -17,6 +17,7 @@ from module.util import db, borg_api, store_logger, convert_from_bytes, octal_to
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
+
 
 class SharedFilesForm(FlaskForm):
     owner = SelectField('Owner:', coerce=int,
@@ -28,6 +29,17 @@ class SharedFilesForm(FlaskForm):
         super(SharedFilesForm, self).__init__(*args, **kwargs)
         if owner_choices:
             self.owner.choices = [(str(user_id), username) for user_id, username in owner_choices]
+
+
+class NewFolderForm(FlaskForm):
+    name = StringField('Folder name:',
+                       validators=[InputRequired()],
+                       render_kw={'placeholder': 'name'})
+    perms = StringField('Folder Permissions:',
+                        validators=[InputRequired(), Length(min=3, max=3), Regexp('^[0-7]{3}$')],
+                        default='744'
+                        )
+    submit = SubmitField('Create Folder')
 
 
 def create_archive(user):
@@ -66,16 +78,15 @@ def borg_unmount(user):
         borg_api.umount(mount_path)
 
 
-@datastore.route('/create-folder', methods=['POST'])
 @login_required
-def create_folder():
-    data = request.get_json()
-    folder_name = data.get('folder_name', '').strip()
-    permissions = data.get('folder_perms', 744).strip()
-    parent_path = data.get('path', '/')
+def create_folder(folder_name, folder_perms, path):
+    folder_name = folder_name.strip()
+    permissions = folder_perms.strip()
+    parent_path = path
 
     if not folder_name:
-        return jsonify({'error': 'Folder name required'}), 400
+        flash('Folder name required', 'error')
+        return
 
     folder_name = secure_filename(folder_name)
 
@@ -84,7 +95,8 @@ def create_folder():
 
     abs_dir = os.path.join(get_user_tree_path(current_user), parent_path.strip('/'), folder_name)
     if os.path.exists(abs_dir):
-        return jsonify({'error': 'Folder already exists'}), 400
+        flash('Folder already exists', 'error')
+        return
 
     os.makedirs(abs_dir)
 
@@ -99,7 +111,7 @@ def create_folder():
     )
 
     store_logger.info(f'User {current_user.username} created folder: {abs_dir}')
-    return jsonify({'message': 'Folder created successfully'})
+    flash('Folder created successfully', 'success')
 
 
 def calculate_folder_size(user, folder_path):
@@ -529,9 +541,15 @@ def file_viewer():
 
     users_list = [(user['id'], user['username']) for user in list_users()]
     shareform = SharedFilesForm(owner_choices=users_list)
+    folderform = NewFolderForm()
 
     if shareform.validate_on_submit():
         return redirect(url_for('/store.get_shared_fs', user_id=shareform.owner.data))
+
+    if folderform.validate_on_submit():
+        folder_name = secure_filename(folderform.name.data)
+        create_folder(folder_name=folder_name, folder_perms=folderform.perms.data, path=current_path)
+        return redirect(request.url)
 
     return render_template(
         'file-viewer.html',
@@ -539,5 +557,6 @@ def file_viewer():
         dir_list=dir_list,
         current_path=current_path,
         archive_list=archive_list,
-        shareform=shareform
+        shareform=shareform,
+        folderform=folderform
     )
