@@ -86,33 +86,20 @@ body {
     margin-left: auto;
     margin-right: auto;
     margin-bottom: 10px;
+    white-space: nowrap;
 }
 
 #file-view table th {
-    padding: 4px;
+    padding: 4px 10px;
 }
 
 #file-view table td {
-    padding-left: 4px;
-    padding-right: 4px;
+    padding: 1px 10px;
 }
 
-#file-view table th:nth-child(1), 
-#file-view table td:nth-child(1),
-#file-view table th:nth-child(2), 
-#file-view table td:nth-child(2) {
+#file-view table th,
+#file-view table td {
     text-align: left;
-}
-
-#file-view table th:nth-child(3), 
-#file-view table th:nth-child(4),
-#file-view table th:nth-child(5),
-#file-view table th:nth-child(6),
-#file-view table td:nth-child(3),
-#file-view table td:nth-child(4),
-#file-view table td:nth-child(5),
-#file-view table td:nth-child(6){
-    text-align: right;
 }
 
 #file-view table thead {
@@ -136,7 +123,7 @@ body {
     border: 1px solid #989898;
     padding: 4px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-    width: 150px;
+    width: 175px;
 }
 
 #file-context-menu ul {
@@ -226,6 +213,49 @@ body {
 .fs-controller {
     display: flex;
     justify-content: center;
+}
+
+.prompt {
+    background-color: #303030;
+    font-family: Brass Mono, Monospace;
+    position: fixed;
+    width: 25%;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid #989898;
+    box-shadow: 0 0 10px #888888;
+    visibility: hidden;
+}
+
+.prompt h1 {
+    background-color: #535353;
+    font-size: 1.5rem;
+    padding-top: 4px;
+    padding-left: 10px;
+    cursor: pointer;
+    margin-top: 0px;
+}
+
+.prompt h1::before {
+    content: "X";
+    margin-right: 14px;
+}
+
+.prompt .content {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    row-gap: 10px;
+}
+
+.prompt .form-group {
+    display: flex;
+    justify-content: center;
+}
+
+.prompt .form-group label {
+    width: 250px;
 }
 
 .popup {

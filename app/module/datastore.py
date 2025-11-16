@@ -13,7 +13,7 @@ from wtforms import SelectField, SubmitField
 from wtforms.validators import InputRequired
 from werkzeug.utils import secure_filename
 
-from module.auth import list_users, get_user_by_id, evaluate_read_permission
+from module.auth import list_users, get_user_by_id, evaluate_read_permission, evaluate_write_permission, evaluate_exec_permission
 from module.util import db, store_logger, convert_from_bytes, octal_to_string
 from module.metadata import UserMetadata
 
@@ -206,7 +206,7 @@ def retrieve_user_store(user):
                 'id': None,
                 'name': dirname,
                 'owner': user.id,
-                'group': user.username,
+                'file_group': user.username,
                 'size': folder_size,
                 'permissions': 744,
                 'is_directory': True
@@ -464,6 +464,60 @@ def rename_file(file_id):
     return jsonify({'success': 'File renamed successfully'}), 200
 
 
+@datastore.route('set-group', methods=['POST'])
+@login_required
+def set_file_group():
+    user_id = request.json.get('user_id')
+    user = get_user_by_id(user_id)
+
+    metadata = UserMetadata(get_metadb_path(user))
+    file_id = request.json.get('file_id')
+    file_data = metadata.get_file_by_id(file_id)
+
+    group = request.json.get('group')
+
+    if not file_data:
+        flash('File not found', 'error')
+        return jsonify({'error': 'File not found'}), 404
+
+    if evaluate_exec_permission(current_user, file_data.__dict__):
+        metadata.set_file_group(file_id, group)
+        flash(f'File group has been changed to {group} for file: {file_data.filename}', 'success')
+        return jsonify({'success': 'File group changed successfully'}), 200
+    else:
+        flash(f'Execute permission not granted for {user.username} to file: {file_data.name}')
+        return jsonify({'error': 'Permission not granted'}), 403
+
+
+@datastore.route('set-perms', methods=['POST'])
+@login_required
+def set_file_perms():
+    user_id = request.json.get('user_id')
+    user = get_user_by_id(user_id)
+
+    metadata = UserMetadata(get_metadb_path(user))
+    file_id = request.json.get('file_id')
+    file_data = metadata.get_file_by_id(file_id)
+
+    perms = request.json.get('perms')
+
+    if not file_data:
+        flash('File not found', 'error')
+        return jsonify({'error': 'File not found'}), 404
+
+    if not perms:
+        flash('Permissions not found', 'error')
+        return jsonify({'error': 'Permissions not given'}), 400
+
+    if evaluate_exec_permission(current_user, file_data.__dict__):
+        metadata.set_file_perms(file_id, perms)
+        flash(f'File permissions have been changed to {perms} for file: {file_data.filename}', 'success')
+        return jsonify({'success': 'File permissions changed successfully'}), 200
+    else:
+        flash(f'Execute permission not granted for {user.username} to file: {file_data.name}')
+        return jsonify({'error': 'Permission not granted'}), 403
+
+
 @datastore.route('/recalc-sizes')
 @login_required
 def recalc_sizes():
@@ -520,7 +574,7 @@ def file_viewer():
     for file in file_list:
         file['size'] = convert_from_bytes(file['size'])
         file['owner'] = get_user_by_id(file['owner']).username
-        file['permissions'] = octal_to_string(file['permissions'])
+        file['permissions'] = octal_to_string(file['permissions'], dir=file['is_directory'])
 
     users_list = [(user['id'], user['username']) for user in list_users()]
     shareform = SharedFilesForm(owner_choices=users_list)

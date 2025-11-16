@@ -1,4 +1,4 @@
-const popups = document.querySelectorAll('.popup');
+const popups = document.querySelectorAll('.popup, .prompt');
 
 popups.forEach(popup => {
     const h1 = popup.querySelector('h1');

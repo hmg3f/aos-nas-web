@@ -85,6 +85,28 @@ class UserMetadata:
         finally:
             session.close()
 
+    def set_file_group(self, id, group):
+        session = self.Session()
+
+        try:
+            file_to_update = session.query(File).filter_by(id=id).first()
+            if file_to_update:
+                file_to_update.file_group = group
+                session.commit()
+        finally:
+            session.close()
+
+    def set_file_perms(self, id, perms):
+        session = self.Session()
+
+        try:
+            file_to_update = session.query(File).filter_by(id=id).first()
+            if file_to_update:
+                file_to_update.permissions = perms
+                session.commit()
+        finally:
+            session.close()
+
     def get_files(self, path):
         sanitized_path = self._sanitize_path(path)
         session = self.Session()
@@ -95,11 +117,20 @@ class UserMetadata:
                 'id': file.id,
                 'name': file.filename,
                 'owner': file.owner,
-                'group': file.file_group,
+                'file_group': file.file_group,
                 'size': file.size,
                 'is_directory': file.is_directory,
                 'permissions': file.permissions
             } for file in files]
+        finally:
+            session.close()
+
+    def get_file_by_id(self, id):
+        session = self.Session()
+
+        try:
+            file = session.query(File).filter(File.id == id).first()
+            return file
         finally:
             session.close()
 

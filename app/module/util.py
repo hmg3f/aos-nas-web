@@ -88,9 +88,9 @@ def convert_from_bytes(byte_size):
     return f"{byte_size:.2f} {units[unit_index]}"
 
 
-def octal_to_string(octal):
+def octal_to_string(octal, dir=False):
     permission = ["---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"]
-    result = "-"
+    result = "d" if dir else "-"
 
     for i in [int(n) for n in str(octal)]:
         result += permission[i]
@@ -104,7 +104,7 @@ def octal_to_dict(octal):
     all_perms = octal % 10
 
     return {
-        'user': {
+        'owner': {
             'read': user_perms & 4 != 0,
             'write': user_perms & 2 != 0,
             'execute': user_perms & 1 != 0

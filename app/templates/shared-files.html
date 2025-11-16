@@ -31,15 +31,15 @@
   <table>
     <thead>
       <tr>
-	<th>
+	<th style="width: 0;">
           <input type="checkbox" id="select-all" autocomplete="off">
 	  <img src="{{ url_for('static', filename='asset/trash-can.svg') }}" alt="Delete" width="15px" height="15px">
         </th>
-	<th style="width: 70%;">Name</th>
-	<th>Owner</th>
-	<th>Group</th>
-	<th>Size</th>
-	<th>Permissions</th>
+	<th>Name</th>
+	<th style="width: 0;">Owner</th>
+	<th style="width: 0;">Group</th>
+	<th style="width: 0;">Size</th>
+	<th style="width: 0;">Permissions</th>
       </tr>
     </thead>
     <tbody>
@@ -62,15 +62,28 @@
 	</td>
 	<td>
 	  {% if item.is_directory %}
-          <a href="{{ url_for('/store.get_shared_fs', user_id=user_id, path=(current_path.rstrip('/') ~ '/' ~ item.name).replace('//','/')) }}" class="overflow-hidden">📁 {{ item.name }}/</a>
+          <a href="{{ url_for('/store.get_shared_fs',
+		   user_id=user_id, path=(current_path.rstrip('/') ~ '/' ~ item.name).replace('//','/')) }}"
+	     class="overflow-hidden file-listing"
+	     data-id="{{ item.id }}"
+	     data-dir="{{ item.is_directory }}"
+	     data-perms="{{ item.permissions }}"
+	     data-group="{{ item.file_group }}"
+	     data-user="{{ current_user.id }}">📁 {{ item.name }}/</a>
 	  {% else %}
-          <a href="{{ url_for('/store.download_file', user_id=user_id, file_id=item.id) }}" class="overflow-hidden file-listing" data-id="{{ item.id }}">
+          <a href="{{ url_for('/store.download_file', user_id=user_id, file_id=item.id) }}"
+	     class="overflow-hidden file-listing"
+	     data-id="{{ item.id }}"
+	     data-dir="{{ item.is_directory }}"
+	     data-perms="{{ item.permissions }}"
+	     data-group="{{ item.file_group }}"
+	     data-user="{{ user_id }}">
             {{ item.name }}
           </a>
 	  {% endif %}
 	</td>
 	<td>{{ item.owner }}</td>
-	<td>{{ item.group }}</td>
+	<td>{{ item.file_group }}</td>
 	<td>{{ item.size }}</td>
 	<td>{{ item.permissions }}</td>
       </tr>
@@ -82,6 +95,7 @@
     <ul>
       <li><a href="#" id="download-option">Download</a></li>
       <li><a href="#" id="rename-option">Rename</a></li>
+      <li><a href="#" id="edit-perms-option">Edit Permissions</a></li>
     </ul>
   </div>
 </section>
@@ -91,13 +105,31 @@
   
   <div class="controls">
     <a href="{{ url_for('/store.file_viewer') }}">◀ Return</a>
+    <button id="delete-button" disabled>Delete Selected</button>
+  </div>
+</section>
+
+<section id="set-perms-prompt" class="prompt">
+  <h1>Edit Permissions</h1>
+  <div class="content">
+    <div class="form-group">
+      <label for="set-group-input">File Group:</label>
+      <input type="text" id="set-group-input" name="set-group">
+    </div>
+    
+    <div class="form-group">
+      <label for="set-perms-input">File Permissions (octal):</label>
+      <input type="text" id="set-perms-input" name="set-group">
+    </div>
+
+    <div class="form-group">
+      <button type="submit" id="set-perms-submit" name="submit-perms">Update Permissions</button>
+    </div>
   </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/dir-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/upload-handler.js') }}"></script>
 <script src="{{ url_for('static', filename='js/file-delete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/file-context.js') }}"></script>
 {% endblock %}

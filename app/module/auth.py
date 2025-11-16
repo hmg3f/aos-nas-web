@@ -98,28 +98,45 @@ def get_user_by_id(user_id):
     return User.query.filter_by(id=user_id).first()
 
 
-def evaluate_read_permission(user, file):
+def evaluate_permission(user, file, perm):
     user_groups = user.user_groups.split(',')
     file_perms = file['permissions']
     file_owner = file['owner']
-    file_group = file['group']
+    file_group = file['file_group']
 
     perms_dict = octal_to_dict(int(file_perms))
 
     if user.has_flag(User.ADMIN):
+        flash('File permissions overidden: Admin granted access', 'error')
         return True
 
     if user.id == file_owner:
-        return True
+        if perms_dict['owner'][perm]:
+            return True
+        else:
+            flash('File permissions overidden: Owner granted access', 'error')
+            return True
 
-    if perms_dict['all']['read']:
+    if perms_dict['all'][perm]:
         return True
 
     if file_group in user_groups:
-        if perms_dict['group']['read']:
+        if perms_dict['group'][perm]:
             return True
 
     return False
+
+
+def evaluate_read_permission(user, file):
+    return evaluate_permission(user, file, 'read')
+
+
+def evaluate_write_permission(user, file):
+    return evaluate_permission(user, file, 'write')
+
+
+def evaluate_exec_permission(user, file):
+    return evaluate_permission(user, file, 'execute')
 
 
 @auth.route('/login', methods=['GET', 'POST'])
