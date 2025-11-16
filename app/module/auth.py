@@ -142,6 +142,9 @@ def evaluate_exec_permission(user, file):
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('/store.file_viewer'))
+
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -158,6 +161,9 @@ def login():
             else:
                 auth_logger.warn(f'Login failed for: {user.username}')
                 flash('Invalid username or password.', 'error')
+        else:
+            auth_logger.warn(f'Login failed for: {form.username.data}')
+            flash('Invalid username or password.', 'error')
 
     return render_template('login.html', form=form)
 
