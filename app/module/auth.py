@@ -5,7 +5,7 @@ from wtforms import StringField, PasswordField, SelectField, SubmitField, Boolea
 from wtforms.validators import InputRequired, Length, EqualTo, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict, get_metadb_path
+from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict, get_metadb_path, convert_to_bytes
 from module.metadata import UserMetadata
 
 import hashlib
@@ -30,7 +30,7 @@ def load_user(user_id):
 
 
 def gen_quota_selections(quotas):
-    return [(None, 'None')] + [(size, size) for size in quotas]
+    return [(0, 'None')] + [(convert_to_bytes(size), size) for size in quotas]
 
 
 class User(db.Model, UserMixin):
@@ -38,7 +38,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
-    quota = db.Column(db.String, nullable=True)
+    quota = db.Column(db.Integer)
     store_path = db.Column(db.String, nullable=False, unique=True)
     archive_state = db.Column(db.String, nullable=True, default=None)
     num_files = db.Column(db.Integer, nullable=False, default=0)
@@ -312,7 +312,7 @@ def create_admin_user():
 
         admin_user = User(username='admin',
                           password=password_hash,
-                          quota=None,
+                          quota=0,
                           store_path=store_path,
                           user_groups='admin')
 

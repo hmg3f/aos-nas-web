@@ -468,4 +468,5 @@ a.performance_links:hover {
     overflow: scroll;
     background-color: #1e1e1e;
     max-height: 500px;
+    white-space: nowrap;
 }

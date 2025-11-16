@@ -13,7 +13,7 @@ from wtforms.validators import InputRequired, Length, Regexp
 from werkzeug.utils import secure_filename
 
 from module.auth import list_users, get_user_by_id, evaluate_read_permission, evaluate_write_permission, evaluate_exec_permission
-from module.util import db, borg_api, store_logger, convert_from_bytes, octal_to_string, get_repo_path, get_mount_path, get_metadb_path, get_user_tree_path, get_stage_path
+from module.util import db, borg_api, store_logger, convert_to_bytes, convert_from_bytes, octal_to_string, get_repo_path, get_mount_path, get_metadb_path, get_user_tree_path, get_stage_path
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
@@ -40,6 +40,38 @@ class NewFolderForm(FlaskForm):
                         default='744'
                         )
     submit = SubmitField('Create Folder')
+
+
+def get_user_stats(user):
+    metadata = UserMetadata(get_metadb_path(user))
+    borg_stats = borg_api.info(get_repo_path(user), json=True)
+    tree_path = get_user_tree_path(user)
+
+    repo_size = borg_stats['cache']['stats']['unique_csize']
+    stage_size = 0
+
+    for path, dirs, files in os.walk(tree_path):
+        for f in files:
+            fp = os.path.join(path, f)
+            stage_size += os.stat(fp).st_size
+
+    if not user.quota == 0:
+        percent_used = repo_size / user.quota * 100
+        percent_used = f'{percent_used:.2f}'
+        quota = convert_from_bytes(user.quota)
+    else:
+        percent_used = None
+        quota = None
+
+    stats = {
+        'file_count': metadata.get_num_files(),
+        'repo_size': convert_from_bytes(repo_size),
+        'stage_size': convert_from_bytes(stage_size),
+        'quota': quota,
+        'percent_used': percent_used
+    }
+
+    return stats
 
 
 def create_archive(user):
@@ -517,11 +549,14 @@ def get_shared_fs():
         file['owner'] = get_user_by_id(file['owner']).username
         file['permissions'] = octal_to_string(file['permissions'])
 
-    return render_template('shared-files.html',
-                           file_list=data.get('files', []),
-                           dir_list=data.get('dirs', []),
-                           current_path=data.get('path', '/'),
-                           user_id=user_id)
+    return render_template(
+        'shared-files.html',
+        file_list=data.get('files', []),
+        dir_list=data.get('dirs', []),
+        current_path=data.get('path', '/'),
+        user_id=user_id,
+        fs_stats=get_user_stats(user)
+    )
 
 
 @datastore.route('/files', methods=['GET', 'POST'])
@@ -557,6 +592,7 @@ def file_viewer():
         dir_list=dir_list,
         current_path=current_path,
         archive_list=archive_list,
+        fs_stats=get_user_stats(current_user),
         shareform=shareform,
         folderform=folderform
     )

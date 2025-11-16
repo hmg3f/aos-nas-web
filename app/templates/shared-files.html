@@ -105,6 +105,29 @@
       <li><a href="#" id="edit-perms-option">Edit Permissions</a></li>
     </ul>
   </div>
+
+  <div id="fs-stats" class="subpanel">
+    <h2>Filesystem Stats:</h2>
+    <div class="stat-block">
+      File Count: {{ fs_stats.file_count }}
+    </div>
+    <div class="stat-block">
+      Size: {{ fs_stats.stage_size }}
+    </div>
+    <div class="stat-block">
+      Repo Size: {{ fs_stats.repo_size }}
+    </div>
+    {% if fs_stats.quota %}
+    <div class="stat-block">
+      quota: {{ fs_stats.quota }}
+    </div>
+    {% endif %}
+    {% if fs_stats.percent_used %}
+    <div class="stat-block">
+      Percent Used: {{ fs_stats.percent_used }}%
+    </div>
+    {% endif %}
+  </div>
 </section>
 
 <section id="toolbox" class="panel">
