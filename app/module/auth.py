@@ -10,6 +10,7 @@ from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict
 import hashlib
 import time
 import os
+import shutil
 
 auth = Blueprint('/auth', __name__)
 
@@ -192,7 +193,9 @@ def account_manager():
         flash('Your account has been updated.', 'success')
         return redirect(url_for('/auth.account_manager'))
 
-    return render_template('account.html', form=form)
+    return render_template('account.html',
+                           form=form,
+                           users_list=list_users())
 
 
 @auth.route('/create', methods=['GET', 'POST'])
@@ -212,7 +215,7 @@ def create_user():
         m.update(str(round(time.time())).encode('utf-8'))
         m.update(form.username.data.encode('utf-8'))
 
-        user_dir = m.hexdigest()[:5]
+        user_dir = m.hexdigest()[:10]
         store_path = os.path.join(DATABASE_PATH, user_dir)
 
         user = User(username=form.username.data,
@@ -236,15 +239,55 @@ def create_user():
     return render_template('create.html', form=form)
 
 
-@auth.route('/delete')
+@auth.route('/disable')
 @login_required
-def delete_user():
+def disable_current_user():
     current_user.enabled = False
     db.session.commit()
     logout_user()
     flash('Your account has been deleted successfully.', 'success')
 
     return redirect(url_for('home'))
+
+
+@auth.route('/admin/disable/<userid>')
+@login_required
+def disable_user(userid):
+    if current_user.has_flag(User.ADMIN):
+        user = get_user_by_id(userid)
+        user.enabled = False
+        db.session.commit()
+        flash(f'Account <{user.username}> disabled successfully.', 'success')
+
+    return redirect(request.referrer)
+
+
+@auth.route('/admin/enable/<userid>')
+@login_required
+def enable_user(userid):
+    if current_user.has_flag(User.ADMIN):
+        user = get_user_by_id(userid)
+        user.enabled = True
+        db.session.commit()
+        flash(f'Account <{user.username}> enabled successfully.', 'success')
+
+    return redirect(request.referrer)
+
+
+@auth.route('/admin/delete/<userid>')
+@login_required
+def delete_user(userid):
+    if current_user.has_flag(User.ADMIN):
+        user = get_user_by_id(userid)
+        store_path = user.store_path
+
+        User.query.filter(User.id == user.id).delete()
+        shutil.rmtree(store_path)
+
+        db.session.commit()
+        flash(f'Account <{user.username}> deleted successfully.', 'success')
+
+    return redirect(request.referrer)
 
 
 def create_admin_user():
@@ -293,6 +336,7 @@ def list_users():
         users_data.append({
             'id': user.id,
             'username': user.username,
+            'enabled': user.enabled
         })
 
     return users_data

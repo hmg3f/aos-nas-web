@@ -363,6 +363,16 @@ body {
     width: 200px;
 }
 
+#account-manager .admin-controls .delete-user-button {
+    background-color: #4a1119;
+    border-color: #4a1119;
+}
+
+#account-manager .admin-controls .delete-user-button:hover {
+    background-color: #9d1f1f;
+    border-color: #9d1f1f;
+}
+
 input[type=password],
 input[type=text] {
     background-color: #000;
