@@ -5,7 +5,8 @@ from wtforms import StringField, PasswordField, SelectField, SubmitField, Boolea
 from wtforms.validators import InputRequired, Length, EqualTo, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict
+from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict, get_metadb_path
+from module.metadata import UserMetadata
 
 import hashlib
 import time
@@ -346,6 +347,26 @@ def list_users():
         })
 
     return users_data
+
+
+@auth.route('/stats/file_count/<user_id>')
+def file_count(user_id):
+    user = get_user_by_id(user_id)
+
+    metadata = UserMetadata(get_metadb_path(user))
+
+    return metadata.get_num_files()
+
+
+@auth.route('/stats/total_files')
+def get_total_files_num():
+    users = User.query.all()
+    total_files = 0
+
+    for user in users:
+        total_files += file_count(user.id)
+
+    return total_files
 
 
 # TODO: allow admin to create new admin accounts

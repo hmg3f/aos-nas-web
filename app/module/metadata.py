@@ -8,6 +8,13 @@ from sqlalchemy.exc import IntegrityError
 Base = declarative_base()
 
 
+def normalized_path(path, filename):
+    path = path.rstrip('/')
+    filename = filename.strip('/')
+
+    return path + '/' + filename
+
+
 class File(Base):
     __tablename__ = 'files'
 
@@ -61,12 +68,24 @@ class UserMetadata:
         finally:
             session.close()
 
-    def remove_file(self, filename):
+    def remove_file(self, file_id):
         session = self.Session()
 
         try:
-            file_to_remove = session.query(File).filter(File.filename == filename).first()
+            file_to_remove = session.query(File).filter(File.id == file_id).first()
             if file_to_remove:
+                if file_to_remove.is_directory:
+                    similar_path = file_to_remove.path.rstrip('/') + '/' + file_to_remove.filename + '/%'
+                    subdir_path = file_to_remove.path.rstrip('/') + '/' + file_to_remove.filename
+                    print(similar_path)
+
+                    subdir_files = session.query(File).filter(
+                        (File.path == subdir_path) | (File.path.like(similar_path))
+                    ).all()
+
+                    for file in subdir_files:
+                        session.delete(file)
+
                 session.delete(file_to_remove)
                 session.commit()
         finally:
@@ -167,3 +186,11 @@ class UserMetadata:
         finally:
             session.close()
 
+    def get_num_files(self):
+        session = self.Session()
+
+        try:
+            file_data = session.query(File).all()
+            return len(file_data)
+        finally:
+            session.close()

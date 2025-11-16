@@ -58,7 +58,10 @@
       {% for item in file_list %}
       <tr>
 	<td>
-	  <input type="checkbox" class="file-checkbox" data-filename="{{ item.name }}" autocomplete="off">
+	  <input type="checkbox"
+		 class="file-checkbox"
+		 data-id="{{ item.id }}"
+		 autocomplete="off">
 	</td>
 	<td>
 	  {% if item.is_directory %}
@@ -113,7 +116,7 @@
     </div>
     <div class="controls">
       <a href="{{ url_for('/store.file_viewer') }}">◀ Return</a>
-      <button id="delete-button" disabled>Delete Selected</button>
+      <button id="delete-button" data-user="{{ user_id }}" disabled>Delete Selected</button>
     </div>
   </div>
 </section>

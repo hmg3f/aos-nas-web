@@ -1,6 +1,5 @@
 import os
 import subprocess
-import borgapi
 import time
 import datetime
 import shutil
@@ -14,14 +13,10 @@ from wtforms.validators import InputRequired
 from werkzeug.utils import secure_filename
 
 from module.auth import list_users, get_user_by_id, evaluate_read_permission, evaluate_write_permission, evaluate_exec_permission
-from module.util import db, store_logger, convert_from_bytes, octal_to_string
+from module.util import db, borg_api, store_logger, convert_from_bytes, octal_to_string, get_repo_path, get_mount_path, get_metadb_path, get_user_tree_path, get_stage_path
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
-
-borg_api = borgapi.BorgAPI(defaults={}, options={})
-borg_api.set_environ(BORG_PASSPHRASE="pass")
-
 
 class SharedFilesForm(FlaskForm):
     owner = SelectField('Owner:', coerce=int,
@@ -33,52 +28,6 @@ class SharedFilesForm(FlaskForm):
         super(SharedFilesForm, self).__init__(*args, **kwargs)
         if owner_choices:
             self.owner.choices = [(str(user_id), username) for user_id, username in owner_choices]
-
-
-def get_repo_path(user):
-    path = os.path.join(user.store_path, 'repo')
-    if not os.path.exists(path):
-        if user.quota not in [None, 'None']:
-            borg_api.init(path, make_parent_dirs=True, encryption="repokey", storage_quota=user.quota)
-        else:
-            borg_api.init(path, make_parent_dirs=True, encryption="repokey")
-
-    return path
-
-
-def get_or_create_dir(path):
-    """return PATH, creating it if it does not exist"""
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    return path
-
-
-def get_stage_path(user):
-    """return path to USER's archive staging directory (/store/stage/)"""
-    return get_or_create_dir(os.path.join(user.store_path, 'stage'))
-
-
-def get_metadb_path(user):
-    """return path to USER's metadata database (/store/stage/_meta.db)"""
-    path = os.path.join(get_stage_path(user), '_meta.db')
-    path = os.path.abspath(path)
-
-    if not os.path.exists(path):
-        with open(path, 'w') as _:
-            pass
-
-    return path
-
-
-def get_user_tree_path(user):
-    """return path to USER's working filetree (/store/stage/tree/)"""
-    return get_or_create_dir(os.path.join(get_stage_path(user), 'tree'))
-
-
-def get_mount_path(user):
-    """return path to mountpoint for USER's archives (/store/mount/)"""
-    return get_or_create_dir(os.path.join(user.store_path, 'mount'))
 
 
 def create_archive(user):
@@ -179,7 +128,7 @@ def calculate_folder_size(user, folder_path):
 @login_required
 def filter_permitted_files(files):
     return [file for file in files
-            if file['is_directory'] or evaluate_read_permission(current_user, file)]
+            if evaluate_read_permission(current_user, file)]
 
 
 @datastore.route('/retrieve/<user>')
@@ -349,59 +298,49 @@ def add_file():
 @login_required
 def delete_files():
     data = request.get_json() or {}
-    names = data.get('files', [])
+    file_ids = data.get('file_ids', [])
+
+    user_id = data.get('user_id')
+    user = get_user_by_id(user_id)
+
     raw_path = data.get('path', '/')
 
-    metadata = UserMetadata(get_metadb_path(current_user))
+    metadata = UserMetadata(get_metadb_path(user))
     current_path = metadata._sanitize_path(raw_path)
 
-    base_tree = get_user_tree_path(current_user)
+    base_tree = get_user_tree_path(user)
     deleted_count = 0
 
-    # TODO: move this to metadata.py and switch to sqlalchemy
-    # metadata db connection for batch ops
-    conn = sqlite3.connect(metadata.db_path)
+    for file_id in file_ids:
+        file_data = metadata.get_file_by_id(file_id)
 
-    for name in names:
-        safe_name = secure_filename(name)
-        abs_target = os.path.join(base_tree, current_path.strip('/'), safe_name)
-
-        if os.path.isdir(abs_target):
-            # Delete directory from disk
-            shutil.rmtree(abs_target)
-
-            # Full folder path in metadata terms
-            if current_path == '/':
-                folder_full_path = '/' + safe_name
-            else:
-                folder_full_path = current_path.rstrip('/') + '/' + safe_name
-
-            # Remove folder entry and all contents under it from metadata
-            conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
-            conn.execute('DELETE FROM files WHERE path = ? OR path LIKE ?', (folder_full_path, folder_full_path.rstrip('/') + '/%'))
-            deleted_count += 1
-
-        elif os.path.isfile(abs_target):
-            # Delete file from disk
-            os.remove(abs_target)
-
-            # Remove file entry for this exact path
-            conn.execute('DELETE FROM files WHERE filename = ? AND path = ?', (safe_name, current_path))
-            deleted_count += 1
-        else:
-            # Not found under this path – skip
+        if not evaluate_write_permission(current_user, file_data.__dict__):
+            flash(f'No write permission granted for {file_data.filename}', 'error')
             continue
 
-    conn.commit()
-    conn.close()
+        abs_target = os.path.join(base_tree, current_path.strip('/'), file_data.filename)
+
+        if os.path.isdir(abs_target):
+            shutil.rmtree(abs_target)
+        elif os.path.isfile(abs_target):
+            os.remove(abs_target)
+        else:
+            continue
+
+        metadata.remove_file(file_id)
+        deleted_count += 1
 
     # Update user stats and archive once after the batch
     if deleted_count > 0:
-        current_user.num_files = max(0, current_user.num_files - deleted_count)
+        user.num_files = max(0, user.num_files - deleted_count)
         db.session.commit()
-        create_archive(current_user)
+        create_archive(user)
 
-    flash(f'{deleted_count} files successfuly deleted.', 'success')
+        flash(f'{deleted_count} files successfuly deleted.', 'success')
+        if deleted_count < len(file_ids):
+            flash(f'{len(file_ids - deleted_count)} files could not be deleted.', 'error')
+    else:
+        flash('Could not complete operation, no files deleted.', 'error')
 
     store_logger.info(f'User {current_user.username} deleted {deleted_count} item(s) from {current_path}')
     return jsonify({'message': f'Deleted {deleted_count} item(s)'}), 200
@@ -418,6 +357,7 @@ def download_file():
     file_data = metadata.get_file_path_by_id(file_id)
 
     if not file_data:
+        flash(f'File not found: id={file_id}', 'error')
         return jsonify({'error': 'File not found'}), 404
 
     file_name, file_path = file_data
@@ -432,36 +372,46 @@ def download_file():
     return send_from_directory(file_path, file_name, as_attachment=True)
 
 
-@datastore.route('/rename/<file_id>', methods=['POST'])
+@datastore.route('/rename', methods=['POST'])
 @login_required
-def rename_file(file_id):
-    metadata = UserMetadata(get_metadb_path(current_user))
-    file_data = metadata.get_file_path_by_id(file_id)
+def rename_file():
+    user_id = request.json.get('user_id')
+    user = get_user_by_id(user_id)
+
+    metadata = UserMetadata(get_metadb_path(user))
+    file_id = request.json.get('file_id')
+    file_data = metadata.get_file_by_id(file_id)
 
     if not file_data:
+        flash(f'File not found: id={file_id}', 'error')
         return jsonify({'error': 'File not found'}), 404
 
-    file_name, file_path = file_data
-    if file_path == '/':
-        current_path = get_user_tree_path(current_user)
-    else:
-        current_path = os.path.join(get_user_tree_path(current_user), file_path)
+    if not evaluate_write_permission(current_user, file_data.__dict__):
+        flash(f'No write permission granted for {file_data.filename}', 'error')
+        return jsonify({'error': f'No write permission granted for file {file_data.filename}'}), 403
 
-    current_file = os.path.join(current_path, file_name)
+    if file_data.path == '/':
+        current_path = get_user_tree_path(user)
+    else:
+        current_path = os.path.join(get_user_tree_path(user), file_data.path.lstrip('/'))
+
+    current_file = os.path.join(current_path, file_data.filename)
 
     new_name = request.json.get('new_name').strip()
 
     if not new_name:
+        flash('No name given during file rename', 'error')
         return jsonify({'error': 'No name given'}), 400
 
     # TODO: support directory rename
     new_file = os.path.join(current_path, new_name)
 
     os.rename(current_file, new_file)
-    metadata.rename_file(new_name, file_path, file_id)
+    metadata.rename_file(new_name, file_data.path, file_id)
 
     store_logger.info(f'User {current_user.username} renamed file: {current_file} to: {new_file}')
 
+    flash('File successfully renamed', 'success')
     return jsonify({'success': 'File renamed successfully'}), 200
 
 

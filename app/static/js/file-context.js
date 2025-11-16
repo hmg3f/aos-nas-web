@@ -59,21 +59,29 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("rename-option").onclick = function() {
 		const newName = prompt("Enter the new file name:");
 		if (newName) {
-		    fetch(`/store/rename/${fileId}`, {
+		    fetch(`/store/rename`, {
 			method: 'POST',
 			headers: {
 			    'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ new_name: newName })
+			body: JSON.stringify({
+			    new_name: newName,
+			    file_id: currentFileId,
+			    user_id: currentUser
+			})
 		    })
-			.then(response => response.json())
 			.then(data => {
 			    if (data.success) {
 				alert("File renamed successfully.");
 				link.textContent = newName; // Update displayed file name
 			    } else {
-				alert("Error renaming file.");
+				console.error("Error renaming file");
+				location.reload();
 			    }
+			})
+			.catch(error => {
+			    console.error("Error:", error);
+			    location.reload();
 			});
 		}
             };

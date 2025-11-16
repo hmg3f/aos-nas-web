@@ -5,6 +5,7 @@ from logging.handlers import RotatingFileHandler
 import re
 import os
 import logging
+import borgapi
 
 db = SQLAlchemy()
 app = Flask("__main__")
@@ -47,6 +48,9 @@ store_handler.setFormatter(log_formatter)
 store_logger = logging.getLogger("store-log")
 store_logger.setLevel(logging.INFO)
 store_logger.addHandler(store_handler)
+
+borg_api = borgapi.BorgAPI(defaults={}, options={})
+borg_api.set_environ(BORG_PASSPHRASE="pass")
 
 
 def convert_to_bytes(size_str):
@@ -120,3 +124,49 @@ def octal_to_dict(octal):
             'execute': all_perms & 1 != 0
         }
     }
+
+
+def get_repo_path(user):
+    path = os.path.join(user.store_path, 'repo')
+    if not os.path.exists(path):
+        if user.quota not in [None, 'None']:
+            borg_api.init(path, make_parent_dirs=True, encryption="repokey", storage_quota=user.quota)
+        else:
+            borg_api.init(path, make_parent_dirs=True, encryption="repokey")
+
+    return path
+
+
+def get_or_create_dir(path):
+    """return PATH, creating it if it does not exist"""
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    return path
+
+
+def get_stage_path(user):
+    """return path to USER's archive staging directory (/store/stage/)"""
+    return get_or_create_dir(os.path.join(user.store_path, 'stage'))
+
+
+def get_metadb_path(user):
+    """return path to USER's metadata database (/store/stage/_meta.db)"""
+    path = os.path.join(get_stage_path(user), '_meta.db')
+    path = os.path.abspath(path)
+
+    if not os.path.exists(path):
+        with open(path, 'w') as _:
+            pass
+
+    return path
+
+
+def get_user_tree_path(user):
+    """return path to USER's working filetree (/store/stage/tree/)"""
+    return get_or_create_dir(os.path.join(get_stage_path(user), 'tree'))
+
+
+def get_mount_path(user):
+    """return path to mountpoint for USER's archives (/store/mount/)"""
+    return get_or_create_dir(os.path.join(user.store_path, 'mount'))

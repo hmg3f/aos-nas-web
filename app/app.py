@@ -3,7 +3,7 @@ import os
 from flask import render_template, jsonify
 
 from module.datastore import datastore
-from module.auth import auth, create_admin_user
+from module.auth import auth, create_admin_user, get_total_files_num
 from module.util import DATABASE_PATH, app, db
 import psutil
 
@@ -23,7 +23,7 @@ db.init_app(app)
 
 @app.route('/')
 def home():
-    return render_template('home.html', files_num=42)
+    return render_template('home.html', files_num=get_total_files_num())
 
 
 @app.route('/system_perf')

@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const selectAllCheckbox = document.getElementById('select-all');
     const deleteButton = document.getElementById('delete-button');
+    const userId = deleteButton.getAttribute('data-user');
     const fileCheckboxes = document.querySelectorAll('.file-checkbox');
 
     // select or deselect all checkboxes
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	
 	fileCheckboxes.forEach(checkbox => {
             if (checkbox.checked) {
-		selectedFiles.push(checkbox.getAttribute('data-filename'));
+		selectedFiles.push(checkbox.getAttribute('data-id'));
             }
 	});
 
@@ -47,7 +48,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	    headers: {
 		'Content-Type': 'application/json',
 	    },
-	    body: JSON.stringify({ files: selectedFiles, path: currentPath }),
+	    body: JSON.stringify({
+		file_ids: selectedFiles,
+		path: currentPath,
+		user_id: userId
+	    }),
 	    credentials: 'same-origin'
 	})
 	    .then(response => {
