@@ -104,131 +104,140 @@
 
 <section id="toolbox" class="panel">
   <h1>Toolbox</h1>
-  
-  <div class="controls">
-    <a href="{{ url_for('/auth.logout') }}">◀ Logout</a>
-    <a href="{{ url_for('/auth.account_manager') }}">Account Management</a>
-    <button id="delete-button" disabled>Delete Selected</button>
-  </div>
-
-  <div class="fs-controller">
-  <section id="new-folder" class="subpanel">
-    <h2>New Folder</h2>
-    <div class="form-group">
-      <input type="text" id="new-folder-name" placeholder="Folder name" required>
-      <button id="create-folder-button">Create Folder</button>
+  <div class="content">
+    <div class="controls">
+      <a href="{{ url_for('/auth.logout') }}">◀ Logout</a>
+      <a href="{{ url_for('/auth.account_manager') }}">Account Management</a>
+      <button id="delete-button" disabled>Delete Selected</button>
     </div>
-    <div id="folder-status"></div>
+  </div>
+</section>
+
+<div class="fs-controller">
+  <section id="new-folder" class="panel">
+    <h1>New Folder</h1>
+    <div class="content">
+      <div class="form-group">
+	<input type="text" id="new-folder-name" placeholder="Folder name" required>
+	<button id="create-folder-button">Create Folder</button>
+      </div>
+      <div id="folder-status"></div>
+    </div>
   </section>
 
-  <section id="file-upload" class="subpanel">
-    <h2>Upload File</h2>
-    <form method="POST" id="upload-form" action="{{ url_for('/store.add_file') }}" enctype="multipart/form-data">
-      <input type="hidden" name="path" id="upload-path" value="{{ current_path }}">
+  <section id="file-upload" class="panel">
+    <h1>Upload File</h1>
+    <div class="content">
+      <form method="POST" id="upload-form" action="{{ url_for('/store.add_file') }}" enctype="multipart/form-data">
+	<input type="hidden" name="path" id="upload-path" value="{{ current_path }}">
 
-      <div class="form-group">
-        <label for="file-input">Choose file:</label>
-        <input type="file" name="file" multiple required>
-      </div>
+	<div class="form-group">
+          <label for="file-input">Choose file:</label>
+          <input type="file" name="file" multiple required>
+	</div>
 
-      <div class="form-group">
-	<label for="group-input">File group:</label>
-	<input type="text" id="group-input" name="group" value="{{ current_user.username }}" required>
-      </div>
+	<div class="form-group">
+	  <label for="group-input">File group:</label>
+	  <input type="text" id="group-input" name="group" value="{{ current_user.username }}" required>
+	</div>
 
-      <div class="form-group">
-        <label>Permissions:</label>
-        <div class="permissions-grid">
-          <div class="perm-header"></div>
-          <div class="perm-header">User</div>
-          <div class="perm-header">Group</div>
-          <div class="perm-header">Everyone</div>
-          
-          <div class="perm-label">Read</div>
-          <input type="checkbox" name="perm_user_read" checked>
-          <input type="checkbox" name="perm_group_read" checked>
-          <input type="checkbox" name="perm_everyone_read">
-          
-          <div class="perm-label">Write</div>
-          <input type="checkbox" name="perm_user_write" checked>
-          <input type="checkbox" name="perm_group_write">
-          <input type="checkbox" name="perm_everyone_write">
-          
-          <div class="perm-label">Execute</div>
-          <input type="checkbox" name="perm_user_execute" checked>
-          <input type="checkbox" name="perm_group_execute">
-	  <input type="checkbox" name="perm_everyone_execute">
+	<div class="form-group">
+          <label>Permissions:</label>
+          <div class="permissions-grid">
+            <div class="perm-header"></div>
+            <div class="perm-header">User</div>
+            <div class="perm-header">Group</div>
+            <div class="perm-header">Everyone</div>
+            
+            <div class="perm-label">Read</div>
+            <input type="checkbox" name="perm_user_read" checked>
+            <input type="checkbox" name="perm_group_read" checked>
+            <input type="checkbox" name="perm_everyone_read">
+            
+            <div class="perm-label">Write</div>
+            <input type="checkbox" name="perm_user_write" checked>
+            <input type="checkbox" name="perm_group_write">
+            <input type="checkbox" name="perm_everyone_write">
+            
+            <div class="perm-label">Execute</div>
+            <input type="checkbox" name="perm_user_execute" checked>
+            <input type="checkbox" name="perm_group_execute">
+	    <input type="checkbox" name="perm_everyone_execute">
+	  </div>
+	  
+	  <div class="permission-display">
+	    Octal: <span id="octal-display">740</span>
+	  </div>
+	  
+	  <button type="submit">Upload</button>
 	</div>
 	
-	<div class="permission-display">
-	  Octal: <span id="octal-display">740</span>
-	</div>
-	
-	<button type="submit">Upload</button>
+	<div id="upload-status"></div>
+      </form>
+    </div>
+  </section>
+
+  <section id="archive-manager" class="panel">
+    <h1>Archive Manager</h1>
+
+    <div class="content">
+      <div class="selector">
+	<button id="previous-archive" class="archive-nav" disabled>◀</button>
+	<select id="archive-selector">
+	  {% for archive in archive_list %}
+	  <option value="{{ archive['id'] }}">{{ archive['name'] }}</option>
+	  {% endfor %}
+	  <option value="" disabled selected>select previous archive...</option>
+	</select>
+	<button id="next-archive" class="archive-nav">▶</button>
+      </div>
+
+      <div id="diff-panel">
+	<h3>Diff View</h3>
+	<div id="diff-viewer"></div>
       </div>
       
-      <div id="upload-status"></div>
-    </form>
+      <button id="revert-archive" disabled>Revert to Archive</button>
+    </div>
   </section>
 
-  <section id="archive-manager" class="subpanel">
-    <h2>Archive Manager</h2>
+  <section id="shared-files" class="panel">
+    <h1>Access Shared Files</h1>
 
-    <div class="selector">
-      <button id="previous-archive" class="archive-nav" disabled>◀</button>
-      <select id="archive-selector">
-	{% for archive in archive_list %}
-	<option value="{{ archive['id'] }}">{{ archive['name'] }}</option>
-	{% endfor %}
-	<option value="" disabled selected>select previous archive...</option>
-      </select>
-      <button id="next-archive" class="archive-nav">▶</button>
-    </div>
+    <div class="content">
+      <form method="POST">
+	{{ shareform.hidden_tag() }}
 
-    <div id="diff-panel">
-      <h3>Diff View</h3>
-      <div id="diff-viewer"></div>
+	<div>
+          <label for="owner">{{ shareform.owner.label }}</label>
+          {{ shareform.owner() }}
+	</div>
+	<div>
+          {{ shareform.submit() }}
+	</div>
+      </form>
     </div>
-    
-    <button id="revert-archive" disabled>Revert to Archive</button>
   </section>
 
-  <section id="shared-files" class="subpanel">
-    <h2>Access Shared Files</h2>
-
-    <form method="POST">
-      {{ shareform.hidden_tag() }}
-
-      <div>
-        <label for="owner">{{ shareform.owner.label }}</label>
-        {{ shareform.owner() }}
+  <section id="set-perms-prompt" class="prompt">
+    <h1>Edit Permissions</h1>
+    <div class="content">
+      <div class="form-group">
+	<label for="set-group-input">File Group:</label>
+	<input type="text" id="set-group-input" name="set-group">
       </div>
-      <div>
-        {{ shareform.submit() }}
+      
+      <div class="form-group">
+	<label for="set-perms-input">File Permissions (octal):</label>
+	<input type="text" id="set-perms-input" name="set-group">
       </div>
-    </form>
+
+      <div class="form-group">
+	<button type="submit" id="set-perms-submit" name="submit-perms">Update Permissions</button>
+      </div>
+    </div>
   </section>
-  </div>
-</section>
-
-<section id="set-perms-prompt" class="prompt">
-  <h1>Edit Permissions</h1>
-  <div class="content">
-    <div class="form-group">
-      <label for="set-group-input">File Group:</label>
-      <input type="text" id="set-group-input" name="set-group">
-    </div>
-    
-    <div class="form-group">
-      <label for="set-perms-input">File Permissions (octal):</label>
-      <input type="text" id="set-perms-input" name="set-group">
-    </div>
-
-    <div class="form-group">
-      <button type="submit" id="set-perms-submit" name="submit-perms">Update Permissions</button>
-    </div>
-  </div>
-</section>
+</div>
 {% endblock %}
 
 {% block scripts %}

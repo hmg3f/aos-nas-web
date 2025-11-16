@@ -13,12 +13,39 @@ body {
     font-size: 1.5rem;
     padding-top: 2px;
     padding-left: 10px;
+    padding-right: 20px;
     cursor: pointer;
 }
 
 .panel h1::before {
     content: "▲";
     margin-right: 14px;
+}
+
+.panel .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+}
+
+.fs-controller {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.fs-controller h1 {
+    margin-top: 0;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.fs-controller .panel {
+    flex: 1;
 }
 
 #login {
@@ -208,11 +235,6 @@ body {
     overflow: auto;
     height: 300px;
     width: 400px;
-}
-
-.fs-controller {
-    display: flex;
-    justify-content: center;
 }
 
 .prompt {
