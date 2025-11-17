@@ -33,6 +33,16 @@
       <button type="submit">Update Account</button>
     </div>
   </form>
+
+  <div id="group-selector">
+    <input id="group-name" type="text" placeholder="group" autocomplete="off">
+    <input type="submit" id="group-add" value="Add group">
+    <ul>
+      {% for group in groups_list %}
+      <li class="group" data-group="{{ group }}">{{ group }}</li>
+      {% endfor %}
+    </ul>
+  </div>
   
   <div class="controls">
     <a href="{{url_for('/store.file_viewer')}}">◀ Return</a>
@@ -73,4 +83,8 @@
   </section>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/group-manager.js') }}"></script>
 {% endblock %}

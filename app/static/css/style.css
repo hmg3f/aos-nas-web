@@ -110,7 +110,7 @@ body {
 }
 
 #file-view {
-    border-bottom: 4px dotted #3e3e3e;
+    /*border-bottom: 4px dotted #3e3e3e;*/
     margin: 0 auto;
 }
 
@@ -381,6 +381,39 @@ body {
 #account-manager .admin-controls .delete-user-button:hover {
     background-color: #9d1f1f;
     border-color: #9d1f1f;
+}
+
+#group-selector {
+    margin: 0 auto;
+    width: fit-content;
+}
+
+#group-selector ul {
+    margin-top: 0;
+    padding-left: 0;
+    list-style-type: none;
+    border: 1px solid #646464;
+}
+
+#group-selector ul li {
+    background-color: #3e3e3e;
+    padding-left: 4px;
+}
+
+#group-selector ul li:nth-child(even) {
+    background-color: #4e4e4e;
+}
+
+#group-selector ul li:hover {
+    background-color: #646464;
+    cursor: pointer;
+    text-decoration: line-through;
+}
+
+#group-selector ul li a {
+    display: block;
+    color: #fff;
+    text-decoration: none;
 }
 
 input[type=password],

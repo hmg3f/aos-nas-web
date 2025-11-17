@@ -202,7 +202,8 @@ def account_manager():
 
     return render_template('account.html',
                            form=form,
-                           users_list=list_users())
+                           users_list=list_users(),
+                           groups_list=current_user.user_groups.split(','))
 
 
 @auth.route('/create', methods=['GET', 'POST'])
@@ -244,6 +245,52 @@ def create_user():
         return redirect(url_for('/store.file_viewer'))
 
     return render_template('create.html', form=form)
+
+
+@auth.route('/group/add', methods=['POST'])
+@login_required
+def add_group():
+    group = request.json.get('group')
+    groups = current_user.user_groups.split(',')
+
+    if group is None:
+        flash('No group found', 'error')
+        return jsonify({'error': 'Group not found'}), 404
+
+    if group not in groups:
+        if group.isalpha():
+            flash(f'Added {current_user.username} to group: {group}', 'success')
+            groups += [group]
+            current_user.user_groups = ','.join(groups)
+            db.session.commit()
+        else:
+            flash(f'Could not add {group} to groups, invalid character', 'error')
+    else:
+        flash(f'{current_user.username} is already a member of {group}', 'error')
+
+    return jsonify({'success': 'User added to group'}), 200
+
+
+@auth.route('/group/remove', methods=['POST'])
+@login_required
+def remove_group():
+    group = request.json.get('group')
+    groups = current_user.user_groups.split(',')
+
+    print(group)
+
+    if group is None:
+        flash('No group found', 'error')
+        return jsonify({'error': 'Group not found'}), 404
+
+    if group in groups:
+        current_user.user_groups = ','.join([g for g in groups if g != group])
+        db.session.commit()
+        flash(f'Removed {current_user.username} from group: {group}', 'success')
+    else:
+        flash(f'{current_user.username} is not a member of {group}', 'error')
+
+    return jsonify({'success': 'User removed from group'}), 200
 
 
 @auth.route('/disable')
