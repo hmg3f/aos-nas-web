@@ -1,14 +1,17 @@
 import os
+import psutil
 
-from flask import render_template, jsonify
+from flask import Flask, render_template, jsonify
+from flask_login import LoginManager
 
 from module.datastore import datastore
-from module.auth import auth, create_admin_user, get_total_files_num
-from module.util import DATABASE_PATH, app, db
-import psutil
+from module.auth import User, auth, create_admin_user, get_total_files_num
+from module.util import DATABASE_PATH, db
 
 if not os.path.exists(DATABASE_PATH):
     os.makedirs(DATABASE_PATH)
+
+app = Flask(__name__)
 
 app.register_blueprint(datastore, url_prefix='/store')
 app.register_blueprint(auth, url_prefix='/auth')
@@ -19,6 +22,20 @@ app.config['SECRET_KEY'] = 'os3N95B6Z9cs'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 db.init_app(app)
+
+login_manager = LoginManager()
+
+login_manager.init_app(app)
+login_manager.login_view = "/auth.login"
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    user = User.query.get(int(user_id))
+    if user and user.enabled:
+        return user
+    else:
+        return None
 
 
 @app.route('/')
@@ -76,4 +93,4 @@ if __name__ == '__main__':
         db.create_all()
         create_admin_user()
 
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8000)

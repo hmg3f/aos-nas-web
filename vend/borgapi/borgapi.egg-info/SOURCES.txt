@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+borgapi/borgapi.egg-info/PKG-INFO
+borgapi/borgapi.egg-info/SOURCES.txt
+borgapi/borgapi.egg-info/dependency_links.txt
+borgapi/borgapi.egg-info/requires.txt
+borgapi/borgapi.egg-info/top_level.txt
+test/test_00_options.py

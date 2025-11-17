@@ -1,4 +1,3 @@
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from logging.handlers import RotatingFileHandler
 
@@ -8,7 +7,6 @@ import logging
 import borgapi
 
 db = SQLAlchemy()
-app = Flask("__main__")
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(MODULE_DIR)

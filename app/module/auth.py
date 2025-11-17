@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, url_for, redirect, flash, jsonify, request
-from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
+from flask_login import UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField, BooleanField
 from wtforms.validators import InputRequired, Length, EqualTo, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from module.util import DATABASE_PATH, app, db, auth_logger, octal_to_dict, get_metadb_path, convert_to_bytes
+from module.util import DATABASE_PATH, db, auth_logger, octal_to_dict, get_metadb_path, convert_to_bytes
 from module.metadata import UserMetadata
 
 import hashlib
@@ -14,19 +14,6 @@ import os
 import shutil
 
 auth = Blueprint('/auth', __name__)
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "/auth.login"
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    user = User.query.get(int(user_id))
-    if user and user.enabled:
-        return user
-    else:
-        return None
 
 
 def gen_quota_selections(quotas):
