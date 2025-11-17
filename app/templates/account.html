@@ -30,6 +30,15 @@
     </div>
 
     <div class="form-group">
+      <label for="hidden_state">Change Hidden State</label>
+      {% if hidden_status %}
+      {{ form.hidden_status(class="form-control", autocomplete="off", checked="") }}
+      {% else %}
+      {{ form.hidden_status(class="form-control", autocomplete="off") }}
+      {% endif %}
+    </div>
+
+    <div class="form-group">
       <button type="submit">Update Account</button>
     </div>
   </form>

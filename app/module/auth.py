@@ -80,6 +80,7 @@ class AccountManagementForm(FlaskForm):
     current_password = PasswordField('Current Password', validators=[InputRequired(), Length(min=4, max=40)])
     new_password = PasswordField('New Password', validators=[Optional(), Length(min=4, max=40)])
     confirm_password = PasswordField('Confirm New Password', validators=[EqualTo('new_password', message='Passwords must match')])
+    hidden_status = BooleanField('Hidden')
     submit = SubmitField('Update Account')
 
 
@@ -183,6 +184,11 @@ def account_manager():
                 flash('Current password is incorrect.', 'error')
                 return redirect(url_for('/auth.account_manager'))
 
+        if form.hidden_status.data:
+            current_user.set_flag(User.HIDDEN)
+        else:
+            current_user.unset_flag(User.HIDDEN)
+
         db.session.commit()
         flash('Your account has been updated.', 'success')
         return redirect(url_for('/auth.account_manager'))
@@ -190,6 +196,7 @@ def account_manager():
     return render_template('account.html',
                            form=form,
                            users_list=list_users(),
+                           hidden_status=current_user.has_flag(User.HIDDEN),
                            groups_list=current_user.user_groups.split(','))
 
 
