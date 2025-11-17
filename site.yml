@@ -2,23 +2,15 @@
 - name: Initialize Server
   hosts: servers
   become: yes
-  vars:
-    apache_pkg: apache2
-    mysql_pkg: mysql-server
-    mysql_root_pass: admin
-    db_name: fs_store
-    db_user: fs
-    db_pass: fs_admin
 
   tasks:
-    - name: Ensure Apache, MySQL, and nftables are installed
+    - name: Ensure system packages are installed
       ansible.builtin.apt:
         name:
-          - "{{ apache_pkg }}"
-          - "{{ mysql_pkg }}"
           - nftables
           - fail2ban
-          - python3-pymysql
+          - docker
+          - git
         state: present
         update_cache: yes
       tags: install
@@ -29,7 +21,7 @@
         dest: /etc/nftables.conf
         owner: root
         group: root
-        mode: '0644'
+        mode: '0711'
       notify: Restart nftables
       tags: nftables
 
@@ -43,6 +35,16 @@
       notify: Restart fail2ban
       tags: fail2ban
 
+    - name: Copy docker configuration
+      ansible.builtin.copy:
+        src: site_conf/docker/
+        dest: /etc/docker/
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart docker
+      tags: docker
+
     - name: Ensure nftables is enabled and started
       ansible.builtin.systemd:
         name: nftables
@@ -50,62 +52,52 @@
         enabled: yes
       tags: nftables
 
-    - name: Ensure Apache is enabled and started
+    - name: Ensure fail2ban is enabled and started
       ansible.builtin.systemd:
-        name: "{{ apache_pkg }}"
+        name: fail2ban
         state: started
         enabled: yes
-      tags: apache
+      tags: fail2ban
 
-    - name: Ensure MySQL is enabled and started
-      ansible.builtin.systemd:
-        name: "mysql"
+    - name: Create ext Docker network
+      docker_network:
+        name: ext
+        driver: bridge
+        subnet: "10.1.0.0/24"
+        gateway: "10.1.0.1"
+        state: present
+
+    - name: Ensure docker is enabled and started
+      ansible.builtin.docker:
+        name: docker
         state: started
         enabled: yes
-      tags: mysql
+      tags: docker
 
-    - name: Set MySQL root password and ensure root can log in
-      community.mysql.mysql_user:
-        name: root
-        host: localhost
-        password: "{{ mysql_root_pass }}"
-        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Clone project git repo
+      git:
+        repo: "https://github.com/hmg3f/aos-nas-web"
+        dest: "/opt/aos-nas-web"
+        version: "master"
+        force: yes
+
+    - name: Build Docker image from the Dockerfile
+      docker_image:
+        build:
+          path: "/opt/aos-nas-web"
+          name: "aos-nas-web"
+          tag: "latest"
         state: present
 
-    - name: Ensure database exists
-      community.mysql.mysql_db:
-        name: "{{ db_name }}"
-        state: present
-        login_user: root
-        login_password: "{{ mysql_root_pass }}"
-        login_unix_socket: /var/run/mysqld/mysqld.sock
-
-    - name: Ensure database user exists
-      community.mysql.mysql_user:
-        name: "{{ db_user }}"
-        password: "{{ db_pass }}"
-        priv: "{{ db_name }}.*:ALL"
-        host: "%"
-        state: present
-        login_user: root
-        login_password: "{{ mysql_root_pass }}"
-        login_unix_socket: /var/run/mysqld/mysqld.sock
-
-    - name: Flush MySQL privileges
-      community.mysql.mysql_query:
-        query: FLUSH PRIVILEGES;
-        login_user: root
-        login_password: "{{ mysql_root_pass }}"
-        login_unix_socket: /var/run/mysqld/mysqld.sock
-
-    - name: Import schema
-      community.mysql.mysql_db:
-        name: "{{ db_name }}"
-        state: import
-        target: site_conf/schema.sql
-        login_user: root
-        login_password: "{{ mysql_root_pass }}"
-        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: Run Docker container from the built image
+      docker_container:
+        name: "aos-nas-web"
+        image: "aos-nas-web:latest"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "8000:8000"
+        detach: yes
 
   handlers:
     - name: Restart nftables
@@ -116,4 +108,9 @@
     - name: Restart fail2ban
       ansible.builtin.systemd:
         name: fail2ban
+        state: restarted
+
+    - name: Restart docker
+      ansible.builtin.systemd:
+        name: docker
         state: restarted
