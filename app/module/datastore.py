@@ -3,7 +3,6 @@ import subprocess
 import time
 import datetime
 import shutil
-import sqlite3
 
 from flask import Blueprint, request, jsonify, send_from_directory, render_template, url_for, redirect, flash
 from flask_login import login_required, current_user
@@ -13,7 +12,7 @@ from wtforms.validators import InputRequired, Length, Regexp
 from werkzeug.utils import secure_filename
 
 from module.auth import list_users, get_user_by_id, evaluate_read_permission, evaluate_write_permission, evaluate_exec_permission
-from module.util import db, borg_api, store_logger, convert_to_bytes, convert_from_bytes, octal_to_string, get_repo_path, get_mount_path, get_metadb_path, get_user_tree_path, get_stage_path
+from module.util import db, borg_api, store_logger, convert_from_bytes, octal_to_string, get_repo_path, get_mount_path, get_metadb_path, get_user_tree_path, get_stage_path
 from module.metadata import UserMetadata
 
 datastore = Blueprint('/store', __name__)
@@ -146,29 +145,6 @@ def create_folder(folder_name, folder_perms, path):
     flash('Folder created successfully', 'success')
 
 
-def calculate_folder_size(user, folder_path):
-    """Return total size (bytes) of all files inside folder_path (direct + recursive)."""
-    metadata = UserMetadata(get_metadb_path(user))
-    norm = metadata._sanitize_path(folder_path)
-
-    conn = sqlite3.connect(metadata.db_path)
-    try:
-        if norm == '/':
-            cursor = conn.execute("SELECT size FROM files WHERE path = '/' OR path = ''")
-            sizes = [row[0] for row in cursor.fetchall() if row[0]]
-        else:
-            like = norm.rstrip('/') + '/%'
-            cursor = conn.execute(
-                "SELECT size FROM files WHERE path = ? OR path = ? OR path LIKE ?",
-                (norm, norm + '/', like)
-            )
-            sizes = [row[0] for row in cursor.fetchall() if row[0]]
-    finally:
-        conn.close()
-
-    return sum(sizes)
-
-
 @login_required
 def filter_permitted_files(files):
     return [file for file in files
@@ -195,7 +171,7 @@ def retrieve_user_store(user):
 
     for dirname, fullpath in dirs_raw:
         if dirname not in folder_names_in_files:
-            folder_size = calculate_folder_size(user, fullpath)
+            folder_size = metadata.calculate_folder_size(fullpath)
             files.append({
                 'id': None,
                 'name': dirname,
@@ -208,7 +184,7 @@ def retrieve_user_store(user):
 
     for f in files:
         if f['is_directory']:
-            f['size'] = calculate_folder_size(user, current_path.rstrip('/') + '/' + f['name'])
+            f['size'] = metadata.calculate_folder_size(current_path.rstrip('/') + '/' + f['name'])
 
     files.sort(key=lambda x: (not x['is_directory'], x['name'].lower()))
 
@@ -511,28 +487,6 @@ def set_file_perms():
     else:
         flash(f'Execute permission not granted for {user.username} to file: {file_data.name}')
         return jsonify({'error': 'Permission not granted'}), 403
-
-
-@datastore.route('/recalc-sizes')
-@login_required
-def recalc_sizes():
-    """Recalculate file sizes for all files in metadata"""
-    base_path = get_user_tree_path(current_user)
-    metadata = UserMetadata(get_metadb_path(current_user))
-    conn = sqlite3.connect(metadata.db_path)
-    cursor = conn.execute('SELECT id, filename, path FROM files')
-    updated = 0
-
-    for fid, fname, fpath in cursor.fetchall():
-        abs_path = os.path.join(base_path, fpath.strip('/'), fname)
-        if os.path.isfile(abs_path):
-            size = os.path.getsize(abs_path)
-            conn.execute('UPDATE files SET size = ? WHERE id = ?', (size, fid))
-            updated += 1
-
-    conn.commit()
-    conn.close()
-    return jsonify({'message': f'Updated {updated} file sizes.'})
 
 
 @datastore.route('/shared-files')

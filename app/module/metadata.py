@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint, TIMESTAMP, create_engine, func
+from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint, TIMESTAMP, create_engine, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -176,6 +176,25 @@ class UserMetadata:
             return sorted([(os.path.basename(d), d) for d in children], key=lambda x: x[0].lower())
         finally:
             session.close()
+
+    def calculate_folder_size(self, path):
+        session = self.Session()
+        path = self._sanitize_path(path)
+
+        try:
+            if path == '/':
+                sizes = session.query(File.size).filter(or_(File.path == '/', File.path == '')).all()
+            else:
+                like_path = path.rstrip('/') + '/%'
+                sizes = session.query(File.size).filter(
+                    or_(File.path == path, File.path == path + '/', File.path.like(like_path))
+                ).all()
+
+            total_size = sum(size[0] for size in sizes if size[0] is not None)
+        finally:
+            session.close()
+
+        return total_size
 
     def get_file_path_by_id(self, file_id):
         session = self.Session()
