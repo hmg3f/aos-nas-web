@@ -1,0 +1,21 @@
+services:
+  aos-nas-web:
+    image: aos-nas-web
+    container_name: aos-nas-web
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - ./app/store:/app/site/store
+      - ./app/log:/app/site/log
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    networks:
+      ext:
+        ipv4_address: 10.10.0.20
+
+networks:
+  ext:
+    external: true
